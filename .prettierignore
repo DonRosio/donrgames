@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+content
+.certs
+package-lock.json
+docs/cahier-des-charges.md

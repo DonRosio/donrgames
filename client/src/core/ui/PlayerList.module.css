@@ -1,0 +1,67 @@
+.list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.player,
+.offline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-radius: var(--radius-small);
+  background: var(--surface-raised);
+}
+
+.offline .name {
+  color: var(--text-muted);
+}
+
+.name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.dotOnline,
+.dotOffline {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dotOnline {
+  background: var(--success);
+}
+
+.dotOffline {
+  border: 2px solid var(--text-muted);
+}
+
+.badge,
+.hostBadge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.badge {
+  background: var(--border);
+}
+
+.hostBadge {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}

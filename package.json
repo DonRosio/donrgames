@@ -1,0 +1,36 @@
+{
+  "name": "mini-jeux",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.ts",
+    "dev:lan": "node scripts/dev.ts --lan",
+    "certs": "node scripts/certs.ts",
+    "typecheck": "tsc -p shared && tsc -p server && tsc -p client && tsc -p scripts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "build": "npm run build -w @mini-jeux/client",
+    "start": "NODE_ENV=production node --env-file-if-exists=.env server/src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.2"
+  }
+}

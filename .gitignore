@@ -9,3 +9,10 @@ dist/
 *.webm
 recordings/
 uploads/
+.certs/
+coverage/
+
+# Games content (videos, selection lists) stays out of git, except examples.
+/content/**
+!/content/**/
+!/content/**/*.example.txt
