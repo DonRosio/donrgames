@@ -8,6 +8,9 @@ const ALLOWED_CHARS =
   /^[\p{L}\p{M}\p{N} \-_.'!\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u{200D}\u{FE0F}]+$/u;
 const MEANINGFUL_CHAR = /[\p{L}\p{N}\p{Extended_Pictographic}\p{Regional_Indicator}]/u;
 const INVISIBLE_JOINERS = /[\u{200D}\u{FE0F}]/gu;
+const COMBINING_MARK = /\p{M}/gu;
+/** Real scripts and emoji use a few marks per character; "Zalgo" text stacks dozens of them. */
+const MAX_MARKS_PER_GRAPHEME = 4;
 
 const segmenter = new Intl.Segmenter('fr', { granularity: 'grapheme' });
 
@@ -27,6 +30,11 @@ export function validateNickname(nickname: string): NicknameError | null {
   if (length < NICKNAME_MIN_LENGTH) return 'NICKNAME_TOO_SHORT';
   if (length > NICKNAME_MAX_LENGTH) return 'NICKNAME_TOO_LONG';
   if (!ALLOWED_CHARS.test(nickname) || !MEANINGFUL_CHAR.test(nickname)) return 'NICKNAME_INVALID';
+  for (const { segment } of segmenter.segment(nickname)) {
+    if ((segment.match(COMBINING_MARK)?.length ?? 0) > MAX_MARKS_PER_GRAPHEME) {
+      return 'NICKNAME_INVALID';
+    }
+  }
   return null;
 }
 

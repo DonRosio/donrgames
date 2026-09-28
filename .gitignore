@@ -11,6 +11,8 @@ recordings/
 uploads/
 .certs/
 coverage/
+test-results/
+playwright-report/
 
 # Games content (videos, selection lists) stays out of git, except examples.
 /content/**

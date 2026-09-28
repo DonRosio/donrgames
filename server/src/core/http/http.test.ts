@@ -83,6 +83,26 @@ describe('HTTP API', () => {
     expect(statuses).toEqual([201, 201, 201, 201, 201, 429]);
   });
 
+  it('behind a proxy, ignores the forged start of X-Forwarded-For', async () => {
+    const proxied = await buildApp({
+      config: testConfig({ TRUST_PROXY: 'true' }),
+      sweepIntervalMs: 0,
+    });
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const response = await proxied.app.inject({
+        method: 'POST',
+        url: '/api/rooms',
+        payload: { nickname: `Joueur${i}` },
+        // The client varies the first entry; the proxy appends the real address.
+        headers: { 'x-forwarded-for': `10.9.9.${i}, 203.0.113.7` },
+      });
+      statuses.push(response.statusCode);
+    }
+    expect(statuses).toEqual([201, 201, 201, 201, 201, 429]);
+    await proxied.app.close();
+  });
+
   it('blocks a client after 10 wrong codes, without affecting others', async () => {
     const { code } = (await create('Léa')).json();
     for (let i = 0; i < 10; i++) expect((await join('ZZZZZZ')).statusCode).toBe(404);

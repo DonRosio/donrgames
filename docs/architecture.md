@@ -62,8 +62,10 @@ mini-jeux/
 ├── package.json            workspaces + scripts racine (dev, check, test, build, start…)
 ├── tsconfig.base.json · eslint.config.js · .prettierrc · .nvmrc (24) · .env.example
 ├── CLAUDE.md
-├── docs/                   cahier des charges, architecture ; plus tard déploiement, revue de sécurité
+├── playwright.config.ts    tests de bout en bout (Chrome et Brave installés)
+├── docs/                   cahier des charges, architecture, revue de sécurité ; plus tard déploiement
 ├── scripts/                dev.ts (serveur + client en parallèle), certs.ts (HTTPS local), content-check.ts
+├── tests/                  registries.test.ts ; e2e/ (serveur de production de test, scénarios Playwright)
 ├── content/                contenus des jeux, hors git (seuls les exemples sont versionnés)
 │   └── dubbing/
 │       ├── selection.txt   la liste des vidéos : « fichier | titre »
@@ -321,7 +323,7 @@ interface Player {
 - **Onglet dupliqué** (même jeton connecté deux fois) : la nouvelle connexion remplace l'ancienne, qui reçoit `session:ended {replaced}`.
 - **Reconnexion** : même jeton → même joueur ; `room:state` et `game:view` sont renvoyés en entier.
 - **Déconnexion** : détectée en 20 s au plus (heartbeat Socket.IO réglé à 10 s + 10 s). En partie, le joueur reste « attendu » 60 s, puis le jeu est prévenu et l'hôte est transféré si c'était lui. Au salon, un joueur déconnecté depuis 5 min est retiré.
-- **Pseudo** : normalisé (NFC, espaces rognés et fusionnés), 2 à 16 caractères (graphèmes). Autorisés : lettres de toutes langues, chiffres, espace, `- _ . ' !` et emojis. Unique dans le salon (sans tenir compte de la casse). Toujours affiché comme du texte React.
+- **Pseudo** : normalisé (NFC, espaces rognés et fusionnés), 2 à 16 caractères (graphèmes). Autorisés : lettres de toutes langues, chiffres, espace, `- _ . ' !` et emojis ; au plus 4 signes combinants par caractère (contre le texte « Zalgo »). Unique dans le salon (sans tenir compte de la casse). Toujours affiché comme du texte React.
 - **Fermeture** : par l'hôte ; au départ du dernier joueur ; après 10 min sans joueur connecté ; après 60 min sans aucune action ; au bout de 12 h dans tous les cas. Toute fermeture supprime les médias du salon.
 - **Limites** : 10 joueurs par salon, 100 salons actifs (configurables).
 
@@ -465,7 +467,7 @@ Aides communes : `Barrier` (qui a fini, complet par rapport aux joueurs attendus
   - rejoindre : 20/min/IP ; au-delà de 10 codes faux en 10 min, blocage de 10 min ;
   - envois de fichiers : 10/min/joueur.
 
-  La clé de comptage est un HMAC de l'IP avec un secret tiré au démarrage : aucune IP en clair, même en mémoire.
+  La clé de comptage est un HMAC de l'IP avec un secret tiré au démarrage : aucune IP en clair, même en mémoire. Avec `TRUST_PROXY=true` (un seul proxy inverse, port Node joignable par lui seul), l'IP retenue est la **dernière** entrée de `X-Forwarded-For`, celle ajoutée par le proxy : les entrées précédentes viennent du client et pourraient être inventées.
 
 - **Erreurs** : la réponse contient seulement `{ error: CODE }` ; les traces de pile apparaissent seulement en dev.
 - **Logs** (pino, sortie standard) : méthode, motif de route, statut, durée, id interne du salon. Jamais d'IP, de pseudo, de jeton, de code de salon ni de corps de requête.
@@ -804,7 +806,9 @@ Dépendances d'exécution prévues :
 - serveur : `fastify`, `@fastify/helmet`, `@fastify/static`, `socket.io`, `zod` ;
 - client : `react`, `react-dom`, `socket.io-client`.
 
-Dépendances de développement : `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`, `eslint`, `typescript-eslint`, `eslint-plugin-react-hooks`, `prettier`, `@types/*`, puis Playwright à l'étape 7.
+Dépendances de développement : `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`, `eslint`, `typescript-eslint`, `eslint-plugin-react-hooks`, `prettier`, `@types/*`, `@playwright/test` (étape 7, sans téléchargement de navigateur).
+
+Revue complète et risques restants : [revue-securite.md](revue-securite.md).
 
 ## 9. Tests
 
@@ -817,7 +821,7 @@ Dépendances de développement : `typescript`, `vite`, `@vitejs/plugin-react`, `
   - lecture de `selection.txt` et des en-têtes MP4 (durée, codecs) ;
   - côté client, les fonctions pures : calcul du décalage d'horloge, calcul du départ synchronisé, choix du format d'enregistrement.
 - **Intégration** : routes HTTP avec `fastify.inject` (création, rejoindre, limites, en-têtes, envois) ; vrai serveur Socket.IO sur un port éphémère avec `socket.io-client` et le jeu fictif enregistré pour le test (lancement, actions, vues par joueur, reconnexion, retour au salon).
-- **Bout en bout** (étape 7) : Playwright avec Chromium, le moteur de Chrome et Brave, donc la cible réelle. Un contexte de navigateur par joueur, faux micro (`--use-fake-device-for-media-stream`, `--use-file-for-fake-audio-capture`).
+- **Bout en bout** (étape 7, `npm run test:e2e`, hors `npm run check`) : Playwright pilote le **Chrome et le Brave installés** (le Chromium de Playwright ne lit pas le H.264). Le serveur de test (`tests/e2e/server.ts`) tourne en mode production avec le client compilé (CSP réelle, contrôle d'origine sur `http://127.0.0.1:4173`) et joue la plus courte vidéo valide de `content/dubbing`. Un contexte de navigateur par joueur, faux micro (`--use-fake-device-for-media-stream`), lecture automatique autorisée. Scénarios : partie complète à 3 (enregistrement, présentations, votes, classement, retour au salon, vidéo non rejouable) ; rechargement en pleine partie, « Passer à la suite », accès manuel à une prise (avec et sans jeton), « Arrêter la partie » qui la supprime. Toute erreur console (dont une violation de CSP) fait échouer le test.
 - **Tests manuels** : à chaque étape, une procédure sur Chrome, puis une vérification sur Brave.
 
 ## 10. Découpage par étapes

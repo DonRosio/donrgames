@@ -56,7 +56,9 @@ export async function buildApp(options: AppOptions): Promise<App> {
     logger: { level: config.logLevel },
     // One line per request is logged below, without IP, headers, query string or body.
     logController: new LogController({ disableRequestLogging: true }),
-    trustProxy: config.trustProxy,
+    // Only the direct peer (our reverse proxy) is trusted: request.ip is the last X-Forwarded-For
+    // entry, the one the proxy added, never a value the client wrote itself.
+    trustProxy: config.trustProxy ? (_address: string, hop: number) => hop === 0 : false,
     bodyLimit: 32 * 1024,
   });
 

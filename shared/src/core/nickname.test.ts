@@ -12,12 +12,21 @@ describe('normalizeNickname', () => {
 });
 
 describe('validateNickname', () => {
-  it.each(['Léa', 'Jean-Pierre', "O'Brien", 'Zoé_42', 'Max!', 'Ça va', '😀 Bob', 'Émile 👨‍👩‍👧'])(
-    'accepts %s',
-    (nickname) => {
-      expect(validateNickname(normalizeNickname(nickname))).toBeNull();
-    },
-  );
+  it.each([
+    'Léa',
+    'Jean-Pierre',
+    "O'Brien",
+    'Zoé_42',
+    'Max!',
+    'Ça va',
+    '😀 Bob',
+    'Émile 👨‍👩‍👧',
+    'Nguyễn',
+    'สวัสดี',
+    '1️⃣ Kim',
+  ])('accepts %s', (nickname) => {
+    expect(validateNickname(normalizeNickname(nickname))).toBeNull();
+  });
 
   it('enforces the length in graphemes, not code units', () => {
     expect(validateNickname('A')).toBe('NICKNAME_TOO_SHORT');
@@ -34,6 +43,7 @@ describe('validateNickname', () => {
     ['zero-width space', 'Bo​b'],
     ['punctuation only', '---'],
     ['slash', 'a/b'],
+    ['stacked combining marks (Zalgo)', `Bo${'́̂̃'.repeat(10)}b`],
   ])('rejects %s', (_label, nickname) => {
     expect(validateNickname(normalizeNickname(nickname))).toBe('NICKNAME_INVALID');
   });
