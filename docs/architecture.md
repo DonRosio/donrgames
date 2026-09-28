@@ -650,6 +650,8 @@ Hôte : game:skip, après une confirmation qui liste les joueurs qu'on n'attendr
 
 ### 7.1 Machine à états
 
+> **État à l'étape 4** : phases `loading` → `broadcast` → `recording` → `roundResults` (provisoire : les prises y sont supprimées, sans présentation). L'étape 5 insère `takeLoading`, `takePlaying`, `voting` et `reveal` entre `recording` et `roundResults`, et déplace la suppression des prises après la présentation.
+
 ```
  loading ──(tous prêts | skip)──▶ broadcast ──(fin de vidéo)──▶ recording
                                                                    │ (toutes les prises | skip)

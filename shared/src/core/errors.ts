@@ -19,6 +19,8 @@ export const ERROR_CODES = [
   'INVALID_SETTINGS',
   'WRONG_PHASE',
   'NOT_PARTICIPANT',
+  'UNSUPPORTED_MEDIA',
+  'STORAGE_FULL',
   'INTERNAL',
 ] as const;
 

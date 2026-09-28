@@ -3,10 +3,13 @@ import type {
   ActionTypeOf,
   GameContract,
   GameErrorOf,
+  MediaRef,
   PayloadOf,
   PhaseOf,
   PlayerView,
   RoomView,
+  UploadKindOf,
+  UploadMetaOf,
 } from '@mini-jeux/shared';
 
 /** Result of a game action, with the refusal already turned into a French message. */
@@ -19,6 +22,16 @@ export interface GameScreenProps<C extends GameContract, V> {
   me: PlayerView;
   isHost: boolean;
   act<A extends ActionTypeOf<C>>(type: A, payload: PayloadOf<C, A>): Promise<ActResult>;
+  /** Sends a file declared in the contract's `uploads`. */
+  upload<K extends UploadKindOf<C>>(
+    kind: K,
+    file: Blob,
+    meta: UploadMetaOf<C, K>,
+  ): Promise<ActResult>;
+  /** Downloads a content file or a recording (with the session token). */
+  fetchMedia(ref: MediaRef): Promise<Blob>;
+  /** Estimated server time (ms). */
+  serverNow(): number;
 }
 
 /** Client side of a game: one screen per phase and the messages of its rule errors. */

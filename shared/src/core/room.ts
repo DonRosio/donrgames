@@ -11,12 +11,14 @@ export interface PlayerView {
   role: 'player' | 'waiting';
 }
 
-export type UnavailableReason = 'NOT_ENOUGH_PLAYERS' | 'TOO_MANY_PLAYERS';
+export type UnavailableReason = 'NOT_ENOUGH_PLAYERS' | 'TOO_MANY_PLAYERS' | 'NO_CONTENT_LEFT';
 
 export interface GameAvailability {
   id: string;
   launchable: boolean;
   reason: UnavailableReason | null;
+  /** Games with content: items not played yet in this room / never seen by anyone present. */
+  content: { left: number; new: number } | null;
 }
 
 export interface RankingEntry {
@@ -39,7 +41,12 @@ export interface RoomView {
   maxPlayers: number;
   games: GameAvailability[];
   /** Game chosen by the host and its current settings. */
-  selectedGame: { id: string; settings: Record<string, SettingValue> } | null;
+  selectedGame: {
+    id: string;
+    settings: Record<string, SettingValue>;
+    /** Current bounds of the integer settings (some depend on the content left). */
+    limits: Record<string, { min: number; max: number }>;
+  } | null;
   /** Final ranking of the game that just ended (status 'results'). */
   results: { gameId: string; ranking: RankingEntry[] } | null;
 }

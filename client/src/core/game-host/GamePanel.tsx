@@ -9,6 +9,8 @@ import styles from './GamePanel.module.css';
 const UNAVAILABLE: Record<string, (info: GameInfo) => string> = {
   NOT_ENOUGH_PLAYERS: (info) => `Il faut au moins ${info.meta.minPlayers} joueurs connectés.`,
   TOO_MANY_PLAYERS: (info) => `Ce jeu accepte au plus ${info.meta.maxPlayers} joueurs.`,
+  NO_CONTENT_LEFT: () =>
+    'Toutes les vidéos ont déjà été jouées dans ce salon. Ajoute-en dans selection.txt et redémarre le serveur.',
 };
 
 interface GamePanelProps {
@@ -70,10 +72,19 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
               {!info.meta.replayable && <span className={styles.badge}>à usage unique</span>}
             </h3>
             <p className="muted">{info.meta.description}</p>
+            {availability?.content && (
+              <p className={styles.content}>
+                {availability.content.new} vidéo{availability.content.new > 1 ? 's' : ''} inédite
+                {availability.content.new > 1 ? 's' : ''} pour les joueurs présents ·{' '}
+                {availability.content.left} pas encore jouée
+                {availability.content.left > 1 ? 's' : ''} dans ce salon
+              </p>
+            )}
           </div>
           <SettingsForm
             defs={info.settings}
             values={selected.settings}
+            limits={selected.limits}
             editable={isHost}
             onChange={(patch: Record<string, SettingValue>) =>
               void run(() => session.setSettings(patch))

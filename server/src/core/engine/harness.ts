@@ -12,7 +12,14 @@ import { GameRunner } from './runner.ts';
 import { ManualScheduler } from './scheduler.ts';
 import { defaultSettings } from './settings.ts';
 import { GameRuleError } from './types.ts';
-import type { GameDefinition, Roster, RosterEntry } from './types.ts';
+import type {
+  ContentAccess,
+  ContentRef,
+  GameDefinition,
+  ReadRef,
+  Roster,
+  RosterEntry,
+} from './types.ts';
 
 export type HarnessResult = { ok: true } | { ok: false; error: string };
 
@@ -24,6 +31,8 @@ interface HarnessOptions<C extends GameContract> {
   seed?: number;
   /** Delay after which a disconnected player is no longer awaited (60 s like the core). */
   graceMs?: number;
+  /** Content items of the game (games declaring `content: true`). */
+  content?: readonly ContentRef[];
 }
 
 /**
@@ -65,6 +74,18 @@ export function createHarness<C extends GameContract, S, V extends { phase: Phas
   };
 
   let ranking: Omit<RankingEntry, 'nickname'>[] | null = null;
+  const played = new Set<string>();
+  const discarded: string[] = [];
+  const random = seededRandom(options.seed ?? 1);
+  const contentAccess: ContentAccess = {
+    remaining: () => (options.content ?? []).filter((item) => !played.has(item.id)).length,
+    pick: () => {
+      const left = (options.content ?? []).filter((item) => !played.has(item.id));
+      return left.length > 0 ? random.pick(left) : null;
+    },
+    markPlayed: (id) => void played.add(id),
+  };
+  let nextFile = 0;
   const runner = new GameRunner({
     definition,
     runId: 'test-run',
@@ -75,7 +96,9 @@ export function createHarness<C extends GameContract, S, V extends { phase: Phas
     },
     roster,
     clock,
-    random: seededRandom(options.seed ?? 1),
+    random,
+    content: contentAccess,
+    media: { discard: (id) => void discarded.push(id) },
     scheduler,
     hooks: {
       onUpdate: () => {},
@@ -119,6 +142,25 @@ export function createHarness<C extends GameContract, S, V extends { phase: Phas
     },
     act(player: string, type: string, payload: unknown = {}): HarnessResult {
       return attempt(() => runner.dispatch(player, type, payload, player === host));
+    },
+    /** Sends a file (fake content: only its size and type matter to the game). */
+    upload(player: string, kind: string, meta: unknown, size = 1000): HarnessResult {
+      return attempt(() => {
+        const permit = runner.acceptUpload(player, kind, meta);
+        if (size > permit.maxBytes) throw new DomainError('PAYLOAD_TOO_LARGE');
+        const file = { id: `file-${++nextFile}`, mime: 'audio/webm', size };
+        runner.completeUpload(player, kind, file, permit.meta);
+      });
+    },
+    /** Content ids marked as played, and files discarded by the game. */
+    get played(): string[] {
+      return [...played];
+    },
+    get discarded(): string[] {
+      return [...discarded];
+    },
+    canRead(player: string, ref: ReadRef): boolean {
+      return runner.canRead(player, ref);
     },
     skip(): HarnessResult {
       return attempt(() => runner.skip());

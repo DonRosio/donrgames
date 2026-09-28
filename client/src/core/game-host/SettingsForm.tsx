@@ -5,13 +5,15 @@ import styles from './SettingsForm.module.css';
 interface SettingsFormProps {
   defs: Record<string, SettingDef>;
   values: Record<string, SettingValue>;
+  /** Current bounds of the integer settings (some depend on the content left). */
+  limits?: Record<string, { min: number; max: number }>;
   /** Read-only for everyone but the host. */
   editable: boolean;
   onChange: (patch: Record<string, SettingValue>) => void;
 }
 
 /** Generic form built from the declarative settings of a game. */
-export function SettingsForm({ defs, values, editable, onChange }: SettingsFormProps) {
+export function SettingsForm({ defs, values, limits, editable, onChange }: SettingsFormProps) {
   const entries = Object.entries(defs);
   if (entries.length === 0) return null;
   return (
@@ -30,8 +32,8 @@ export function SettingsForm({ defs, values, editable, onChange }: SettingsFormP
               ) : def.kind === 'int' ? (
                 <IntInput
                   id={id}
-                  min={def.min}
-                  max={def.max}
+                  min={limits?.[key]?.min ?? def.min}
+                  max={limits?.[key]?.max ?? (typeof def.max === 'number' ? def.max : def.min)}
                   value={value as number}
                   onCommit={(v) => onChange({ [key]: v })}
                 />

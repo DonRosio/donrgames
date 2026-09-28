@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { GameViewEnvelope, RoomView } from '@mini-jeux/shared';
+import type { GameViewEnvelope, MediaRef, RoomView } from '@mini-jeux/shared';
 import { isErrorCode } from '@mini-jeux/shared';
 import { clientGames } from '../../games/registry.ts';
 import { codeMessage, errorMessage } from '../session/errors.ts';
@@ -32,6 +32,20 @@ export function GameView({ room, envelope, session }: GameViewProps) {
     [session, game],
   );
 
+  const upload = useCallback(
+    async (kind: string, file: Blob, meta: unknown): Promise<ActResult> => {
+      try {
+        const result = await session.upload(kind, file, meta);
+        return result.ok ? { ok: true } : { ok: false, message: messageOf(result.code, game) };
+      } catch (failure) {
+        return { ok: false, message: errorMessage(failure) };
+      }
+    },
+    [session, game],
+  );
+  const fetchMedia = useCallback((ref: MediaRef) => session.fetchMedia(ref), [session]);
+  const serverNow = useCallback(() => session.serverNow(), [session]);
+
   if (!envelope || !me) {
     return (
       <p className="muted" role="status">
@@ -50,7 +64,16 @@ export function GameView({ room, envelope, session }: GameViewProps) {
     <div className={styles.view}>
       {isHost && <HostBar session={session} />}
       {Screen ? (
-        <Screen view={envelope.view} room={room} me={me} isHost={isHost} act={act} />
+        <Screen
+          view={envelope.view}
+          room={room}
+          me={me}
+          isHost={isHost}
+          act={act}
+          upload={upload}
+          fetchMedia={fetchMedia}
+          serverNow={serverNow}
+        />
       ) : (
         <p className="error">Écran manquant pour la phase « {phase} ».</p>
       )}

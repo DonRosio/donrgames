@@ -25,9 +25,10 @@ const join = (code: string, nickname = 'Tom', remoteAddress = '10.0.0.1') =>
   });
 
 describe('HTTP API', () => {
-  it('reports its health and the (empty) game registry', async () => {
+  it('reports its health and the game catalog', async () => {
     expect((await built.app.inject('/api/health')).json()).toEqual({ ok: true });
-    expect((await built.app.inject('/api/games')).json()).toEqual([]);
+    const catalog = (await built.app.inject('/api/games')).json() as { meta: { id: string } }[];
+    expect(catalog.map((game) => game.meta.id)).toEqual(['dubbing']);
   });
 
   it('creates a room and returns a code and a 256-bit token', async () => {

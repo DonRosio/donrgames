@@ -60,6 +60,10 @@ export interface SessionResponse {
   token: string;
 }
 
+export interface UploadResponse {
+  mediaId: string;
+}
+
 export interface ErrorResponse {
   error: ErrorCode;
 }

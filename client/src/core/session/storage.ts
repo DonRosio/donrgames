@@ -78,6 +78,13 @@ export const historyStore = {
       return {};
     }
   },
+  /** Remembers that this content was played on this device (most recent kept, 500 per game). */
+  add(gameId: string, contentId: string): void {
+    const history = this.load();
+    const ids = (history[gameId] ?? []).filter((id) => id !== contentId);
+    history[gameId] = [...ids, contentId].slice(-500);
+    write(local, HISTORY_KEY, JSON.stringify(history));
+  },
   isEmpty(): boolean {
     return Object.values(this.load()).every((ids) => ids.length === 0);
   },

@@ -35,6 +35,8 @@ const MESSAGES: Record<ClientErrorCode, string> = {
   INVALID_SETTINGS: 'Réglage invalide.',
   WRONG_PHASE: 'Action impossible à ce moment de la partie.',
   NOT_PARTICIPANT: 'Tu ne participes pas à cette partie.',
+  UNSUPPORTED_MEDIA: "Format d'enregistrement non pris en charge par le serveur.",
+  STORAGE_FULL: "Le serveur n'a plus de place pour les enregistrements. Réessaie dans un instant.",
   INTERNAL: 'Erreur inattendue du serveur.',
   NETWORK: 'Impossible de joindre le serveur. Vérifie ta connexion.',
   TIMEOUT: 'Le serveur ne répond pas. Réessaie.',

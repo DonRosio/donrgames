@@ -93,6 +93,7 @@ describe('games in a room', () => {
       id: 'fixture',
       launchable: false,
       reason: 'NOT_ENOUGH_PLAYERS',
+      content: null,
     });
     expect(errorCode(() => rooms.startGame(host))).toBe('GAME_UNAVAILABLE');
   });

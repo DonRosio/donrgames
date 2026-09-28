@@ -6,10 +6,13 @@ import type { Scheduler } from './scheduler.ts';
 import { GameRuleError } from './types.ts';
 import type {
   AnyGameDefinition,
+  ContentAccess,
   GameContext,
   PhaseDef,
   PlayerChange,
+  ReadRef,
   Roster,
+  UploadedFile,
   ViewContext,
 } from './types.ts';
 
@@ -32,6 +35,15 @@ export interface RunnerOptions {
   random: GameRandom;
   scheduler: Scheduler;
   hooks: RunnerHooks;
+  content: ContentAccess;
+  media: { discard(id: string): void };
+}
+
+/** What an accepted upload may contain. */
+export interface UploadPermit {
+  maxBytes: number;
+  mimeTypes: readonly string[];
+  meta: unknown;
 }
 
 type AnyPhase = PhaseDef<GameContract, unknown>;
@@ -104,6 +116,45 @@ export class GameRunner {
     this.#afterChange();
   }
 
+  /**
+   * First half of an upload, before the body is read: same generic checks as an action, plus the
+   * size the game accepts right now.
+   */
+  acceptUpload(playerId: string, kind: string, meta: unknown): UploadPermit {
+    if (this.#ended || this.#disposed) throw new DomainError('WRONG_PHASE');
+    const contract = this.definition.contract as GameContract;
+    const upload =
+      contract.uploads && Object.hasOwn(contract.uploads, kind)
+        ? contract.uploads[kind]
+        : undefined;
+    if (!upload) throw new DomainError('INVALID_PAYLOAD');
+    if (!this.#currentPhase().uploads?.includes(kind)) throw new DomainError('WRONG_PHASE');
+    if (!this.#options.roster.get(playerId)?.present) throw new DomainError('NOT_PARTICIPANT');
+    const parsed = upload.meta.safeParse(meta);
+    if (!parsed.success) throw new DomainError('INVALID_PAYLOAD');
+    const maxBytes = this.definition.uploadLimit?.(this.#state, playerId, kind) ?? null;
+    if (maxBytes === null) throw new DomainError('WRONG_PHASE');
+    return { maxBytes, mimeTypes: upload.mimeTypes, meta: parsed.data };
+  }
+
+  /** Second half: the file is stored, the game takes it (or rejects it). */
+  completeUpload(playerId: string, kind: string, file: UploadedFile, meta: unknown): void {
+    if (this.#ended || this.#disposed) throw new DomainError('WRONG_PHASE');
+    const phase = this.#currentPhase();
+    // The phase may have changed while the body was being received.
+    if (!phase.uploads?.includes(kind)) throw new DomainError('WRONG_PHASE');
+    const handler = (phase.onUpload as Record<string, AnyUploadHandler> | undefined)?.[kind];
+    if (!handler) throw new DomainError('WRONG_PHASE');
+    handler(this.#state, this.#context(), playerId, file, meta);
+    this.#afterChange();
+  }
+
+  /** Whether a participant may download a content file or a recording right now. */
+  canRead(playerId: string, ref: ReadRef): boolean {
+    if (this.#ended || this.#disposed || !this.isParticipant(playerId)) return false;
+    return this.definition.canRead?.(this.#state, playerId, ref) ?? false;
+  }
+
   /** Host's "Passer à la suite". */
   skip(): void {
     if (this.#ended || this.#disposed) throw new DomainError('WRONG_PHASE');
@@ -168,6 +219,8 @@ export class GameRunner {
       now: () => options.clock.now(),
       random: options.random,
       players: options.roster,
+      content: options.content,
+      media: options.media,
       goto: (phase) => {
         if (!this.#currentPhase().next.includes(phase)) {
           throw new Error(`Undeclared transition ${this.#phase} -> ${phase}`);
@@ -213,4 +266,12 @@ type AnyHandler = (
   ctx: GameContext<GameContract>,
   from: string,
   payload: unknown,
+) => void;
+
+type AnyUploadHandler = (
+  state: unknown,
+  ctx: GameContext<GameContract>,
+  from: string,
+  file: UploadedFile,
+  meta: unknown,
 ) => void;

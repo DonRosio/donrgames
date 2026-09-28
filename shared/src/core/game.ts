@@ -17,7 +17,15 @@ export type SettingValue = number | string | boolean;
 
 /** Declarative settings: rendered by a generic form in the lobby, validated by the server. */
 export type SettingDef =
-  | { kind: 'int'; label: string; min: number; max: number; default: number }
+  | {
+      kind: 'int';
+      label: string;
+      min: number;
+      /** 'contentLeft': number of content items not played yet in the room. */
+      max: number | 'contentLeft';
+      /** 'contentNew': items nobody present has seen (falls back to contentLeft when zero). */
+      default: number | 'contentNew';
+    }
   | {
       kind: 'choice';
       label: string;
@@ -36,11 +44,20 @@ export interface ActionDef {
  * Everything both halves of a game agree on. Lives in shared/src/games/<id>.ts; the server
  * validates actions with it, the client imports it as a type only.
  */
+export interface UploadDef {
+  /** Metadata sent along with the file (X-Upload-Meta header, JSON). */
+  meta: z.ZodType;
+  /** Accepted container types; the real type is checked from the file content. */
+  mimeTypes: readonly string[];
+}
+
 export interface GameContract {
   meta: GameMeta;
   phases: readonly string[];
   settings: Readonly<Record<string, SettingDef>>;
   actions: Readonly<Record<string, ActionDef>>;
+  /** Files the players can send (e.g. a recorded take). */
+  uploads?: Readonly<Record<string, UploadDef>>;
   /** Error codes the game rules can raise; the client module gives their French messages. */
   errors: readonly string[];
 }
@@ -56,6 +73,12 @@ export type PayloadOf<
   A extends ActionTypeOf<C>,
 > = C['actions'][A]['payload'] extends z.ZodType ? z.output<C['actions'][A]['payload']> : never;
 export type GameErrorOf<C extends GameContract> = C['errors'][number];
+export type UploadKindOf<C extends GameContract> = keyof NonNullable<C['uploads']> & string;
+export type UploadMetaOf<C extends GameContract, K extends UploadKindOf<C>> = NonNullable<
+  C['uploads']
+>[K]['meta'] extends z.ZodType
+  ? z.output<NonNullable<C['uploads']>[K]['meta']>
+  : never;
 
 type SettingValueOf<D> = D extends { kind: 'int' }
   ? number
@@ -74,6 +97,10 @@ export interface GameInfo {
   meta: GameMeta;
   settings: Record<string, SettingDef>;
 }
+
+/** Something a client may download during a game: a content file or a private recording. */
+export type MediaRef =
+  { kind: 'content'; gameId: string; id: string } | { kind: 'media'; id: string };
 
 /** Final scores given by a game; the core ranks them (ties share a rank). */
 export interface ScoreEntry {

@@ -1,0 +1,138 @@
+.screen {
+  display: grid;
+  gap: var(--gap);
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.round {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.step {
+  color: var(--accent);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.center {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.big {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.hint {
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.reminder {
+  padding: 10px 14px;
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-small);
+  background: var(--surface-raised);
+}
+
+.player {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: #000;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  max-height: 62vh;
+  object-fit: contain;
+}
+
+.placeholder {
+  padding: 80px 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 45%);
+  color: var(--accent);
+  font-size: 7rem;
+  font-weight: 900;
+}
+
+.rec {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #2a0808;
+  font-weight: 800;
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.done {
+  color: var(--success);
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.warning {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status li {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+}
+
+.status li.ok {
+  background: color-mix(in srgb, var(--success) 22%, var(--surface-raised));
+  color: var(--text);
+}

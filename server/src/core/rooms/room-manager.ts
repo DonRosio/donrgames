@@ -22,8 +22,19 @@ import type { GameRandom } from '../engine/random.ts';
 import { GameRunner } from '../engine/runner.ts';
 import { systemScheduler } from '../engine/scheduler.ts';
 import type { Scheduler } from '../engine/scheduler.ts';
-import { defaultSettings, patchSettings } from '../engine/settings.ts';
-import type { AnyGameDefinition, Roster, RosterEntry } from '../engine/types.ts';
+import { effectiveSettings, patchSettings, settingLimits } from '../engine/settings.ts';
+import type { ContentCounts } from '../engine/settings.ts';
+import type { UploadPermit } from '../engine/runner.ts';
+import type {
+  AnyGameDefinition,
+  ContentAccess,
+  ReadRef,
+  Roster,
+  RosterEntry,
+} from '../engine/types.ts';
+import type { ContentItem, ContentLibrary } from '../content/library.ts';
+import { MediaStore } from '../media/media-store.ts';
+import type { StoredMedia } from '../media/media-store.ts';
 import { DomainError } from '../lib/errors.ts';
 import { hashToken } from '../lib/random.ts';
 import type { RandomSource } from '../lib/random.ts';
@@ -83,8 +94,13 @@ export interface Room {
   /** Insertion order is arrival order. */
   players: Map<string, Player>;
   selectedGame: string | null;
+  /** Values chosen by the host; see effectiveSettings() for the values actually used. */
   settings: Record<string, SettingValue>;
+  /** Settings the host changed: the others follow their (possibly content-based) default. */
+  settingsTouched: Set<string>;
   runner: GameRunner | null;
+  /** Content already played in this room, per game: never proposed again here. */
+  played: Map<string, Set<string>>;
   results: { gameId: string; ranking: RankingEntry[] } | null;
   createdAt: number;
   lastActionAt: number;
@@ -136,6 +152,9 @@ export interface RoomManagerOptions {
   games?: readonly AnyGameDefinition[];
   scheduler?: Scheduler;
   gameRandom?: GameRandom;
+  /** Content of the games declaring `content: true`, by game id. */
+  content?: ReadonlyMap<string, ContentLibrary>;
+  media?: MediaStore;
 }
 
 export class RoomManager {
@@ -145,6 +164,8 @@ export class RoomManager {
   readonly #games: ReadonlyMap<string, AnyGameDefinition>;
   readonly #scheduler: Scheduler;
   readonly #gameRandom: GameRandom;
+  readonly #content: ReadonlyMap<string, ContentLibrary>;
+  readonly media: MediaStore;
   #events: RoomEvents = noEvents;
   readonly #rooms = new Map<string, Room>();
   readonly #sessions = new Map<string, SessionRef>();
@@ -156,6 +177,9 @@ export class RoomManager {
     this.#games = new Map((options.games ?? []).map((game) => [contractOf(game).meta.id, game]));
     this.#scheduler = options.scheduler ?? systemScheduler;
     this.#gameRandom = options.gameRandom ?? cryptoGameRandom;
+    this.#content = options.content ?? new Map();
+    this.media =
+      options.media ?? new MediaStore({ clock: options.clock, newId: () => options.random.id(16) });
   }
 
   setEvents(events: RoomEvents): void {
@@ -184,8 +208,10 @@ export class RoomManager {
       status: 'lobby',
       players: new Map(),
       selectedGame: firstGame ? contractOf(firstGame).meta.id : null,
-      settings: firstGame ? defaultSettings(contractOf(firstGame).settings) : {},
+      settings: {},
+      settingsTouched: new Set(),
       runner: null,
+      played: new Map(),
       results: null,
       createdAt: now,
       lastActionAt: now,
@@ -292,7 +318,8 @@ export class RoomManager {
     const game = this.#games.get(gameId);
     if (!game) throw new DomainError('GAME_NOT_FOUND');
     room.selectedGame = gameId;
-    room.settings = defaultSettings(contractOf(game).settings);
+    room.settings = {};
+    room.settingsTouched = new Set();
     this.#touch(room);
     this.#events.roomChanged(room);
   }
@@ -301,9 +328,13 @@ export class RoomManager {
     const { room } = this.#hostInLobby(session);
     const game = room.selectedGame ? this.#games.get(room.selectedGame) : undefined;
     if (!game) throw new DomainError('GAME_NOT_FOUND');
-    const settings = patchSettings(contractOf(game).settings, room.settings, patch);
+    const defs = contractOf(game).settings;
+    const counts = this.#counts(room, game);
+    const current = effectiveSettings(defs, room.settings, room.settingsTouched, counts);
+    const settings = patchSettings(defs, current, patch, counts);
     if (!settings) throw new DomainError('INVALID_SETTINGS');
     room.settings = settings;
+    for (const key of Object.keys(patch)) room.settingsTouched.add(key);
     this.#touch(room);
     this.#events.roomChanged(room);
   }
@@ -327,11 +358,20 @@ export class RoomManager {
       }
     }
 
+    const gameId = contractOf(game).meta.id;
+    const settings = effectiveSettings(
+      contractOf(game).settings,
+      room.settings,
+      room.settingsTouched,
+      this.#counts(room, game),
+    );
     const runner: GameRunner = new GameRunner({
       definition: game,
       runId: this.#random.id(6),
       participants,
-      settings: room.settings,
+      settings,
+      content: this.#contentAccess(room, gameId, participants),
+      media: { discard: (id) => this.#discardMedia(room, id) },
       roster: this.#roster(room, participants, nicknames),
       clock: this.#clock,
       random: this.#gameRandom,
@@ -409,6 +449,68 @@ export class RoomManager {
     };
   }
 
+  // ---------------------------------------------------------------- files
+
+  /** Before receiving an upload: checks it is expected and returns what it may contain. */
+  acceptUpload(session: Session, kind: string, meta: unknown): UploadPermit {
+    const runner = session.room.runner;
+    if (session.room.status !== 'playing' || !runner) throw new DomainError('WRONG_PHASE');
+    return runner.acceptUpload(session.player.id, kind, meta);
+  }
+
+  /** Stores a received file and gives it to the game; the file is deleted if the game refuses it. */
+  completeUpload(
+    session: Session,
+    kind: string,
+    upload: { data: Buffer; mime: string; meta: unknown },
+  ): StoredMedia {
+    const { room, player } = session;
+    const runner = room.runner;
+    if (room.status !== 'playing' || !runner) throw new DomainError('WRONG_PHASE');
+    const stored = this.media.put({
+      roomId: room.id,
+      ownerId: player.id,
+      mime: upload.mime,
+      data: upload.data,
+    });
+    if (!stored) throw new DomainError('STORAGE_FULL');
+    try {
+      runner.completeUpload(
+        player.id,
+        kind,
+        { id: stored.id, mime: stored.mime, size: stored.data.length },
+        upload.meta,
+      );
+    } catch (error) {
+      this.media.delete(stored.id);
+      throw error;
+    }
+    this.#touch(room);
+    if (room.runner === runner) this.#events.gameUpdated(room);
+    return stored;
+  }
+
+  /** A recording this player may download right now, or null (unknown, other room, not allowed). */
+  readableMedia(session: Session, mediaId: string): StoredMedia | null {
+    const media = this.media.get(mediaId);
+    if (!media || media.roomId !== session.room.id) return null;
+    return this.#canRead(session, { kind: 'media', id: mediaId }) ? media : null;
+  }
+
+  /** A content file this player may download right now, or null. */
+  readableContent(session: Session, gameId: string, contentId: string): ContentItem | null {
+    const runner = session.room.runner;
+    if (!runner || contractOf(runner.definition).meta.id !== gameId) return null;
+    const item = this.#content.get(gameId)?.items.find((candidate) => candidate.id === contentId);
+    if (!item) return null;
+    return this.#canRead(session, { kind: 'content', id: contentId }) ? item : null;
+  }
+
+  #canRead(session: Session, ref: ReadRef): boolean {
+    const runner = session.room.runner;
+    return session.room.status === 'playing' && !!runner && runner.canRead(session.player.id, ref);
+  }
+
   // ---------------------------------------------------------------- maintenance and views
 
   /** Periodic maintenance: host hand-over, grace delays, removal of long-gone players, expiry. */
@@ -471,7 +573,7 @@ export class RoomManager {
         role: player.role,
       })),
       games: [...this.#games.values()].map((game) => this.#availability(room, game)),
-      selectedGame: room.selectedGame ? { id: room.selectedGame, settings: room.settings } : null,
+      selectedGame: this.#selectedView(room),
       results: room.results,
     };
   }
@@ -482,13 +584,69 @@ export class RoomManager {
     const { id, minPlayers, maxPlayers } = contractOf(game).meta;
     let connected = 0;
     for (const player of room.players.values()) if (player.socketId !== null) connected++;
+    const counts = this.#counts(room, game);
     const reason =
-      connected < minPlayers
-        ? 'NOT_ENOUGH_PLAYERS'
-        : connected > maxPlayers
-          ? 'TOO_MANY_PLAYERS'
-          : null;
-    return { id, launchable: reason === null, reason };
+      counts && counts.left === 0
+        ? 'NO_CONTENT_LEFT'
+        : connected < minPlayers
+          ? 'NOT_ENOUGH_PLAYERS'
+          : connected > maxPlayers
+            ? 'TOO_MANY_PLAYERS'
+            : null;
+    return { id, launchable: reason === null, reason, content: counts };
+  }
+
+  #selectedView(room: Room): RoomView['selectedGame'] {
+    const game = room.selectedGame ? this.#games.get(room.selectedGame) : undefined;
+    if (!game) return null;
+    const defs = contractOf(game).settings;
+    const counts = this.#counts(room, game);
+    return {
+      id: contractOf(game).meta.id,
+      settings: effectiveSettings(defs, room.settings, room.settingsTouched, counts),
+      limits: settingLimits(defs, counts),
+    };
+  }
+
+  /** Content counts of a game in a room (null for games without content). */
+  #counts(room: Room, game: AnyGameDefinition): ContentCounts | null {
+    if (!game.content) return null;
+    const gameId = contractOf(game).meta.id;
+    const items = this.#content.get(gameId)?.items ?? [];
+    const played = room.played.get(gameId);
+    const left = items.filter((item) => !played?.has(item.id));
+    const seen = (item: ContentItem) =>
+      [...room.players.values()].some((player) => player.history.get(gameId)?.has(item.id));
+    return { left: left.length, new: left.filter((item) => !seen(item)).length };
+  }
+
+  #contentAccess(room: Room, gameId: string, participants: readonly string[]): ContentAccess {
+    const items = this.#content.get(gameId)?.items ?? [];
+    const played = () => room.played.get(gameId) ?? new Set<string>();
+    return {
+      remaining: () => items.filter((item) => !played().has(item.id)).length,
+      pick: () => {
+        const left = items.filter((item) => !played().has(item.id));
+        if (left.length === 0) return null;
+        // Prefer the items seen by the fewest participants (ideally nobody).
+        const seenBy = (item: ContentItem) =>
+          participants.filter((id) => room.players.get(id)?.history.get(gameId)?.has(item.id))
+            .length;
+        const fewest = Math.min(...left.map(seenBy));
+        const item = this.#gameRandom.pick(
+          left.filter((candidate) => seenBy(candidate) === fewest),
+        );
+        return { id: item.id, title: item.title, durationMs: item.durationMs };
+      },
+      markPlayed: (id) => {
+        if (!room.played.has(gameId)) room.played.set(gameId, new Set());
+        room.played.get(gameId)!.add(id);
+      },
+    };
+  }
+
+  #discardMedia(room: Room, id: string): void {
+    if (this.media.get(id)?.roomId === room.id) this.media.delete(id);
   }
 
   #roster(room: Room, participants: readonly string[], nicknames: Map<string, string>): Roster {
@@ -525,6 +683,7 @@ export class RoomManager {
     if (room.runner !== runner) return;
     room.runner = null;
     room.status = 'results';
+    this.media.deleteRoom(room.id);
     room.results = {
       gameId: contractOf(runner.definition).meta.id,
       ranking: rank(scores).map((entry) => ({
@@ -538,6 +697,7 @@ export class RoomManager {
   }
 
   #backToLobby(room: Room): void {
+    this.media.deleteRoom(room.id);
     room.runner?.dispose();
     room.runner = null;
     room.status = 'lobby';
@@ -597,6 +757,7 @@ export class RoomManager {
   }
 
   #closeRoom(room: Room, reason: RoomCloseReason): void {
+    this.media.deleteRoom(room.id);
     room.runner?.dispose();
     room.runner = null;
     this.#rooms.delete(room.code);

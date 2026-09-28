@@ -8,7 +8,10 @@ import type { GameRandom } from './core/engine/random.ts';
 import type { Scheduler } from './core/engine/scheduler.ts';
 import { validateRegistry } from './core/engine/validate.ts';
 import { registerClient } from './core/http/client.ts';
+import { loadContentLibrary } from './core/content/library.ts';
+import type { ContentLibrary } from './core/content/library.ts';
 import { registerErrorHandler } from './core/http/errors.ts';
+import { registerMediaRoutes } from './core/http/media.routes.ts';
 import { registerRoomRoutes } from './core/http/rooms.routes.ts';
 import { registerSecurity } from './core/http/security.ts';
 import { createIpKeyer } from './core/lib/client-ip.ts';
@@ -28,6 +31,8 @@ export interface AppOptions {
   /** Game timers and randomness (replaced by manual / seeded versions in tests). */
   scheduler?: Scheduler;
   gameRandom?: GameRandom;
+  /** Content libraries by game id (tests); read from CONTENT_DIR otherwise. */
+  content?: ReadonlyMap<string, ContentLibrary>;
   /** Maintenance period (room expiry, limiters). 0 disables the timer (tests call sweep()). */
   sweepIntervalMs?: number;
   /** Serve the built client. Defaults to production only (Vite serves it in development). */
@@ -70,11 +75,23 @@ export async function buildApp(options: AppOptions): Promise<App> {
   await registerSecurity(app, config);
   registerErrorHandler(app);
 
+  // Content of the non-replayable games: invalid lines are reported, not fatal.
+  const content = new Map<string, ContentLibrary>();
+  for (const game of games) {
+    if (!game.content) continue;
+    const id = (game.contract as GameContract).meta.id;
+    const library = options.content?.get(id) ?? loadContentLibrary(config.contentDir, id);
+    for (const problem of library.problems) app.log.warn({ game: id }, `content: ${problem}`);
+    app.log.info({ game: id, items: library.items.length }, 'content loaded');
+    content.set(id, library);
+  }
+
   const rooms = new RoomManager({
     clock,
     random: options.random ?? cryptoRandom,
     limits: config.limits,
     games,
+    content,
     ...(options.scheduler ? { scheduler: options.scheduler } : {}),
     ...(options.gameRandom ? { gameRandom: options.gameRandom } : {}),
   });
@@ -87,6 +104,7 @@ export async function buildApp(options: AppOptions): Promise<App> {
   });
   app.get('/api/games', async () => catalog);
   const roomRoutes = registerRoomRoutes(app, { rooms, clock, ipKey });
+  const mediaRoutes = registerMediaRoutes(app, { rooms, clock });
 
   const serveClient = options.serveClient ?? config.env === 'production';
   if (serveClient) await registerClient(app, config.clientDistDir);
@@ -109,7 +127,9 @@ export async function buildApp(options: AppOptions): Promise<App> {
 
   const sweep = () => {
     rooms.sweep();
+    rooms.media.sweep();
     roomRoutes.sweep();
+    mediaRoutes.sweep();
   };
   const sweepIntervalMs = options.sweepIntervalMs ?? 1000;
   const timer = sweepIntervalMs > 0 ? setInterval(sweep, sweepIntervalMs) : null;

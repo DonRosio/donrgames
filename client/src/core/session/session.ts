@@ -6,11 +6,13 @@ import type {
   ClientToServerEvents,
   ClockPong,
   GameViewEnvelope,
+  MediaRef,
   RoomView,
   ServerToClientEvents,
   SettingValue,
+  UploadResponse,
 } from '@mini-jeux/shared';
-import { ClockSync } from './clock.ts';
+import { ClockSync, localNow } from './clock.ts';
 import type { ClockEstimate } from './clock.ts';
 import { ApiError } from './errors.ts';
 import type { EndReason } from './errors.ts';
@@ -51,8 +53,10 @@ export class Session {
     clock: null,
   };
   #retry: ReturnType<typeof setTimeout> | null = null;
+  readonly #token: string;
 
   constructor(token: string) {
+    this.#token = token;
     this.#socket = io({
       path: SOCKET_PATH,
       transports: ['websocket'],
@@ -162,6 +166,51 @@ export class Session {
     return this.#request('results:dismiss', {});
   }
 
+  /** Estimated server time (ms), compensated for the clock offset of this device. */
+  serverNow(): number {
+    return localNow() + (this.#snapshot.clock?.offsetMs ?? 0);
+  }
+
+  /** Downloads a content file or a recording the running game lets this player read. */
+  async fetchMedia(ref: MediaRef): Promise<Blob> {
+    const url =
+      ref.kind === 'content'
+        ? `/api/content/${encodeURIComponent(ref.gameId)}/${encodeURIComponent(ref.id)}`
+        : `/api/media/${encodeURIComponent(ref.id)}`;
+    const response = await this.#authorizedFetch(url);
+    if (!response.ok) {
+      const code = await errorCodeOf(response);
+      throw new ApiError(isErrorCode(code) || code === 'NETWORK' ? code : 'INTERNAL');
+    }
+    return response.blob();
+  }
+
+  /** Sends a file to the running game (e.g. a recorded take); refusals are returned. */
+  async upload(kind: string, file: Blob, meta: unknown): Promise<ActionAck & { mediaId?: string }> {
+    const response = await this.#authorizedFetch(`/api/uploads/${encodeURIComponent(kind)}`, {
+      method: 'POST',
+      headers: { 'content-type': file.type, 'x-upload-meta': JSON.stringify(meta) },
+      body: file,
+    });
+    if (!response.ok) return { ok: false, code: await errorCodeOf(response) };
+    const body = (await response.json()) as UploadResponse;
+    return { ok: true, mediaId: body.mediaId };
+  }
+
+  async #authorizedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+    try {
+      return await fetch(url, {
+        ...init,
+        headers: {
+          ...(init.headers as Record<string, string>),
+          authorization: `Bearer ${this.#token}`,
+        },
+      });
+    } catch {
+      throw new ApiError('NETWORK');
+    }
+  }
+
   /** Sends a game action; refusals are returned, not thrown. */
   async act(type: string, payload: unknown): Promise<ActionAck> {
     const result = await this.#emit('game:action', { type, payload });
@@ -219,4 +268,10 @@ export class Session {
     this.#snapshot = { ...this.#snapshot, ...patch };
     for (const listener of this.#listeners) listener();
   }
+}
+
+async function errorCodeOf(response: Response): Promise<string> {
+  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  if (typeof body?.error === 'string') return body.error;
+  return response.status >= 502 && response.status <= 504 ? 'NETWORK' : 'INTERNAL';
 }
