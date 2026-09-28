@@ -14,19 +14,32 @@ export const dubbingContract = defineContract({
     maxPlayers: 10,
     replayable: false,
   },
-  phases: ['loading', 'broadcast', 'recording', 'roundResults'],
+  phases: [
+    'loading',
+    'broadcast',
+    'recording',
+    'takeLoading',
+    'takePlaying',
+    'voting',
+    'reveal',
+    'roundResults',
+  ],
   settings: {
     rounds: {
       kind: 'int',
       label: 'Nombre de manches (vidéos)',
       min: 1,
       max: 'contentLeft',
-      default: 'contentNew',
+      default: 'contentLeft',
     },
   },
   actions: {
     /** The video (or take) of this synchronization step is loaded on this device. */
     ready: { payload: z.strictObject({ syncId: z.string().min(1).max(32) }) },
+    /** Points given to the take being presented; +2 once per round and per voter. */
+    vote: {
+      payload: z.strictObject({ points: z.union([z.literal(0), z.literal(1), z.literal(2)]) }),
+    },
     next: { payload: z.strictObject({}), hostOnly: true },
     /** End the game after the current round. */
     finish: { payload: z.strictObject({}), hostOnly: true },
@@ -41,7 +54,7 @@ export const dubbingContract = defineContract({
       mimeTypes: ['audio/webm', 'audio/ogg', 'audio/mp4'],
     },
   },
-  errors: ['STALE_SYNC', 'TAKE_LOCKED'],
+  errors: ['STALE_SYNC', 'TAKE_LOCKED', 'SELF_VOTE', 'ALREADY_VOTED', 'PLUS_TWO_USED'],
 });
 
 export type DubbingContract = typeof dubbingContract;
@@ -56,6 +69,22 @@ interface Base {
   rounds: number;
 }
 
+export type Points = 0 | 1 | 2;
+
+/** Place of the take being presented in the presentation order. */
+export interface Presentation {
+  presenter: string;
+  /** 1-based index and number of takes presented this round. */
+  index: number;
+  count: number;
+}
+
+export interface TakeRef {
+  mediaId: string;
+  /** Position in the recording at which the first video frame was shown. */
+  offsetMs: number;
+}
+
 export type DubbingView =
   | (Base & { phase: 'loading'; video: VideoRef; syncId: string; ready: string[] })
   | (Base & { phase: 'broadcast'; video: VideoRef; startAt: number })
@@ -66,4 +95,36 @@ export type DubbingView =
       validated: string[];
       mine: 'pending' | 'validated';
     })
-  | (Base & { phase: 'roundResults'; videoTitle: string; validated: string[]; last: boolean });
+  | (Base &
+      Presentation & {
+        phase: 'takeLoading' | 'takePlaying';
+        video: VideoRef;
+        take: TakeRef;
+        syncId: string;
+        ready: string[];
+        /** Server time of the synchronized start (takePlaying only). */
+        startAt: number | null;
+      })
+  | (Base &
+      Presentation & {
+        phase: 'voting';
+        /** Who voted, never how much before the reveal. */
+        voted: string[];
+        voters: string[];
+        myVote: Points | null;
+        canUsePlusTwo: boolean;
+      })
+  | (Base &
+      Presentation & {
+        phase: 'reveal';
+        /** Every expected voter; null when they did not vote (counts as 0). */
+        votes: { voter: string; points: Points | null }[];
+        total: number;
+      })
+  | (Base & {
+      phase: 'roundResults';
+      videoTitle: string;
+      /** Points won this round and total, best total first. */
+      scores: { playerId: string; roundPoints: number; total: number }[];
+      last: boolean;
+    });

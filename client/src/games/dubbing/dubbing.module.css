@@ -136,3 +136,9 @@
   background: color-mix(in srgb, var(--success) 22%, var(--surface-raised));
   color: var(--text);
 }
+
+.board {
+  width: 100%;
+  max-width: 520px;
+  text-align: left;
+}

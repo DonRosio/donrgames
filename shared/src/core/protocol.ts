@@ -41,18 +41,13 @@ export interface ServerToClientEvents {
   'session:ended': (payload: { reason: SessionEndReason }) => void;
 }
 
-/** Ids of already played content, per game id. Stored on each device (localStorage). */
-export type ContentHistory = Record<string, string[]>;
-
 export interface CreateRoomRequest {
   nickname: string;
-  history: ContentHistory;
 }
 
 export interface JoinRoomRequest {
   code: string;
   nickname: string;
-  history: ContentHistory;
 }
 
 export interface SessionResponse {

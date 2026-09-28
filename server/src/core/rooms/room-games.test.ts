@@ -56,9 +56,9 @@ describe('games in a room', () => {
         throw error;
       },
     });
-    host = rooms.createRoom({ nickname: 'Alice', history: {} });
+    host = rooms.createRoom({ nickname: 'Alice' });
     rooms.attachSocket(host, 's-alice');
-    bob = rooms.joinRoom({ code: host.room.code, nickname: 'Bob', history: {} });
+    bob = rooms.joinRoom({ code: host.room.code, nickname: 'Bob' });
     rooms.attachSocket(bob, 's-bob');
   });
 
@@ -99,7 +99,7 @@ describe('games in a room', () => {
   });
 
   it('starts a game: only the connected players take part', () => {
-    const carol = rooms.joinRoom({ code: room().code, nickname: 'Carol', history: {} });
+    const carol = rooms.joinRoom({ code: room().code, nickname: 'Carol' });
     rooms.startGame(host);
     expect(room().status).toBe('playing');
     expect(rooms.gameView(room(), host.player.id)).toMatchObject({
@@ -121,7 +121,7 @@ describe('games in a room', () => {
 
   it('makes late joiners wait for the next game', () => {
     rooms.startGame(host);
-    const dave = rooms.joinRoom({ code: room().code, nickname: 'Dave', history: {} });
+    const dave = rooms.joinRoom({ code: room().code, nickname: 'Dave' });
     expect(dave.player.role).toBe('waiting');
   });
 
@@ -172,7 +172,7 @@ describe('games in a room', () => {
   it('shows the final ranking, then goes back to the lobby with everyone', () => {
     rooms.setSettings(host, { rounds: 1 });
     rooms.startGame(host);
-    const dave = rooms.joinRoom({ code: room().code, nickname: 'Dave', history: {} });
+    const dave = rooms.joinRoom({ code: room().code, nickname: 'Dave' });
     submitAll(80);
     rooms.gameAction(host, 'next', {});
     expect(room().status).toBe('results');

@@ -74,10 +74,8 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
             <p className="muted">{info.meta.description}</p>
             {availability?.content && (
               <p className={styles.content}>
-                {availability.content.new} vidéo{availability.content.new > 1 ? 's' : ''} inédite
-                {availability.content.new > 1 ? 's' : ''} pour les joueurs présents ·{' '}
-                {availability.content.left} pas encore jouée
-                {availability.content.left > 1 ? 's' : ''} dans ce salon
+                {availability.content.left} vidéo{availability.content.left > 1 ? 's' : ''} pas
+                encore jouée{availability.content.left > 1 ? 's' : ''} dans ce salon
               </p>
             )}
           </div>

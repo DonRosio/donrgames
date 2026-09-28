@@ -11,7 +11,7 @@ import type { GameInfo } from '@mini-jeux/shared';
 import { navigate, takeFlash } from '../../app/router.ts';
 import { api } from '../session/api.ts';
 import { codeMessage, errorMessage } from '../session/errors.ts';
-import { historyStore, nicknameStore, sessionStore } from '../session/storage.ts';
+import { nicknameStore, sessionStore } from '../session/storage.ts';
 import type { StoredSession } from '../session/storage.ts';
 import styles from './HomePage.module.css';
 
@@ -22,7 +22,6 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
   const [code, setCode] = useState(joinCode ?? '');
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [hasHistory, setHasHistory] = useState(() => !historyStore.isEmpty());
 
   useEffect(() => {
     document.title = 'Mini-jeux entre amis';
@@ -52,7 +51,7 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
     if (!name) return;
     setBusy('create');
     try {
-      enterRoom(await api.createRoom({ nickname: name, history: historyStore.load() }), name);
+      enterRoom(await api.createRoom({ nickname: name }), name);
     } catch (failure) {
       setError(errorMessage(failure));
       setBusy(null);
@@ -74,7 +73,6 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
       const session = await api.joinRoom({
         code: normalizedCode,
         nickname: name,
-        history: historyStore.load(),
       });
       enterRoom(session, name);
     } catch (failure) {
@@ -176,18 +174,6 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
 
       <footer className={styles.footer}>
         <p>Aucun compte. Tes enregistrements sont supprimés à la fin de la partie.</p>
-        {hasHistory && (
-          <button
-            type="button"
-            className="btn btn-small"
-            onClick={() => {
-              historyStore.clear();
-              setHasHistory(false);
-            }}
-          >
-            Oublier mon historique de vidéos
-          </button>
-        )}
       </footer>
     </main>
   );

@@ -17,8 +17,8 @@ export interface GameAvailability {
   id: string;
   launchable: boolean;
   reason: UnavailableReason | null;
-  /** Games with content: items not played yet in this room / never seen by anyone present. */
-  content: { left: number; new: number } | null;
+  /** Games with content: number of items not played yet in this room. */
+  content: { left: number } | null;
 }
 
 export interface RankingEntry {

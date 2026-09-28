@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Scoreboard } from '../../core/ui/Scoreboard.tsx';
 import { RoundHeader } from './common.tsx';
 import type { ScreenProps } from './common.tsx';
 import styles from './dubbing.module.css';
@@ -17,14 +18,17 @@ export function RoundResultsScreen({ view, room, isHost, act }: ScreenProps<'rou
       <RoundHeader round={view.round} rounds={view.rounds} step="Fin de manche" />
       <div className={`card ${styles.center}`}>
         <p className={styles.big}>« {view.videoTitle} »</p>
-        <p>
-          {view.validated.length === 0
-            ? 'Aucune prise validée.'
-            : `Prises validées : ${view.validated.map(name).join(', ')}.`}
-        </p>
-        <p className="muted">
-          La présentation des prises et les votes arrivent à la prochaine étape.
-        </p>
+        <div className={styles.board}>
+          <Scoreboard
+            me={room.me}
+            entries={view.scores.map((entry) => ({
+              playerId: entry.playerId,
+              nickname: name(entry.playerId),
+              score: entry.total,
+              delta: entry.roundPoints,
+            }))}
+          />
+        </div>
         {isHost ? (
           <div className={styles.actions}>
             <button type="button" className="btn btn-primary" onClick={() => void run('next')}>

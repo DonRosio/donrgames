@@ -8,16 +8,16 @@
 
 ### 0.1 Tranchées ensemble
 
-| Sujet                    | Décision                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Blocages                 | Aucun minuteur de jeu. L'hôte a un bouton « Passer à la suite » (avec confirmation) à chaque étape d'attente. Un joueur déconnecté n'est plus attendu après 60 s ; s'il revient, il reprend où en est la partie. Pas de prise validée → pas présenté dans la manche ; pas de vote → 0.                                                                                                                                        |
-| Joueurs                  | Doublage : 2 à 10. Salon : 10 joueurs max (configurable).                                                                                                                                                                                                                                                                                                                                                                     |
-| Manches                  | Une manche = une vidéo. Par défaut, la partie joue **toutes les vidéos inédites** pour les joueurs présents ; s'il n'y en a aucune, toutes celles pas encore jouées dans le salon. L'hôte peut en choisir moins et peut **terminer la partie après n'importe quelle manche** (classement final ; les vidéos non jouées restent disponibles). Rythme attendu : 2 soirées par an, avec de nouvelles vidéos ajoutées entre deux. |
-| Historique entre soirées | Mémoire locale de chaque appareil (localStorage) ; rien n'est stocké côté serveur. Une vidéo déjà vue par un joueur présent n'est donc pas reproposée par défaut, même si elle est toujours dans `selection.txt`.                                                                                                                                                                                                             |
-| Contexte de jeu          | À distance, tous en appel Discord : chaque appareil joue le son. Chacun se met en sourd et muet sur Discord pendant qu'il s'enregistre.                                                                                                                                                                                                                                                                                       |
-| Appareils et navigateurs | **PC uniquement, sous Windows ou Linux, avec Chrome ou Brave (Chromium).** Brave reste pris en charge tant qu'il ne cause pas trop de blocages ; sinon, on passe à Chrome uniquement. Firefox « au mieux » : le code reste standard, mais il n'est pas testé à chaque étape. Safari, iPhone, Mac et mobiles sont hors cible. **Écart assumé** avec le cahier des charges (§ Contraintes navigateur).                          |
-| Jeu de test              | **Aucun pour l'instant.** Le moteur est validé par des tests automatiques utilisant un jeu fictif qui n'existe que dans les tests (jamais sur le site). **Écart assumé** avec le cahier des charges (étape 3).                                                                                                                                                                                                                |
-| Vidéos                   | Tu déposes des extraits déjà coupés (MP4) dans `content/dubbing/` et tu les listes dans `selection.txt` (`fichier \| titre`). Le serveur lit lui-même la durée et le format ; pas de script d'import ni de ffmpeg (§7.5).                                                                                                                                                                                                     |
+| Sujet                    | Décision                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blocages                 | Aucun minuteur de jeu. L'hôte a un bouton « Passer à la suite » (avec confirmation) à chaque étape d'attente. Un joueur déconnecté n'est plus attendu après 60 s ; s'il revient, il reprend où en est la partie. Pas de prise validée → pas présenté dans la manche ; pas de vote → 0.                                                                                                               |
+| Joueurs                  | Doublage : 2 à 10. Salon : 10 joueurs max (configurable).                                                                                                                                                                                                                                                                                                                                            |
+| Manches                  | Une manche = une vidéo. Par défaut, la partie joue **toutes les vidéos pas encore jouées dans le salon**, dans un ordre aléatoire. L'hôte peut en choisir moins et peut **terminer la partie après n'importe quelle manche** (classement final ; les vidéos non jouées restent disponibles). Rythme attendu : 2 soirées par an, avec de nouvelles vidéos ajoutées entre deux.                        |
+| Historique entre soirées | **Aucun** (retiré à l'étape 5 à la demande de l'utilisateur) : la seule règle est qu'une vidéo n'est jamais rejouée dans un même salon. Rien n'est gardé sur les appareils.                                                                                                                                                                                                                          |
+| Contexte de jeu          | À distance, tous en appel Discord : chaque appareil joue le son. Chacun se met en sourd et muet sur Discord pendant qu'il s'enregistre.                                                                                                                                                                                                                                                              |
+| Appareils et navigateurs | **PC uniquement, sous Windows ou Linux, avec Chrome ou Brave (Chromium).** Brave reste pris en charge tant qu'il ne cause pas trop de blocages ; sinon, on passe à Chrome uniquement. Firefox « au mieux » : le code reste standard, mais il n'est pas testé à chaque étape. Safari, iPhone, Mac et mobiles sont hors cible. **Écart assumé** avec le cahier des charges (§ Contraintes navigateur). |
+| Jeu de test              | **Aucun pour l'instant.** Le moteur est validé par des tests automatiques utilisant un jeu fictif qui n'existe que dans les tests (jamais sur le site). **Écart assumé** avec le cahier des charges (étape 3).                                                                                                                                                                                       |
+| Vidéos                   | Tu déposes des extraits déjà coupés (MP4) dans `content/dubbing/` et tu les listes dans `selection.txt` (`fichier \| titre`). Le serveur lit lui-même la durée et le format ; pas de script d'import ni de ffmpeg (§7.5).                                                                                                                                                                            |
 
 ### 0.2 Choix techniques retenus
 
@@ -44,7 +44,7 @@
  │  games/<id>/  écrans         │ ◀────────────────▶  │  core/media    prises (RAM, TTL)        │
  │                              │   (Socket.IO)       │  core/content  listes de vidéos         │
  │ sessionStorage : jeton       │                     │  games/<id>/   machines à états         │
- │ localStorage : déjà vu       │                     │  état 100 % en mémoire                  │
+ │                              │                     │  état 100 % en mémoire                  │
  └──────────────────────────────┘                     └─────────────────────────────────────────┘
 ```
 
@@ -72,7 +72,7 @@ mini-jeux/
 │   ├── index.ts
 │   ├── core/
 │   │   ├── limits.ts       constantes (longueurs, tailles, joueurs max…)
-│   │   ├── schemas.ts      zod : code, pseudo, corps HTTP, charges utiles socket, historique
+│   │   ├── schemas.ts      zod : code, pseudo, corps HTTP, charges utiles socket
 │   │   ├── protocol.ts     événements Socket.IO typés, Ack, codes d'erreur
 │   │   ├── room.ts         RoomView, PlayerView
 │   │   └── game.ts         GameMeta, SettingDef, GameContract, defineContract, types dérivés (PhaseOf, PayloadOf…)
@@ -101,7 +101,7 @@ mini-jeux/
         ├── main.tsx
         ├── app/            App.tsx, router.ts, mise en page
         ├── core/
-        │   ├── session/    api.ts, socket.ts, store.ts, clock.ts, token.ts, history.ts
+        │   ├── session/    api.ts, session.ts, context.ts, clock.ts, storage.ts, errors.ts
         │   ├── media/      loader.ts, audio.ts (AudioContext partagé), recorder.ts, sync.ts
         │   ├── ui/         Scoreboard, RankingScreen, Countdown, VotePanel, VoteReveal, SyncedVideoPlayer,
         │   │               AudioRecorder, LevelMeter, PlayerList, HostBar, ConnectionBanner, SoundUnlock…
@@ -138,8 +138,8 @@ export type SettingDef =
       min: number;
       // Étape 4 : 'contentLeft' = nombre de contenus pas encore joués dans le salon
       max: number | 'contentLeft';
-      // Étape 4 : 'contentNew' = inédits pour tous les présents (à défaut, contentLeft)
-      default: number | 'contentNew';
+      // 'contentLeft' = tout le contenu pas encore joué dans le salon
+      default: number | 'contentLeft';
     }
   | { kind: 'choice'; label: string; options: { value: string; label: string }[]; default: string }
   | { kind: 'boolean'; label: string; default: boolean };
@@ -190,7 +190,7 @@ export const dubbing = defineContract({
       label: 'Nombre de manches (vidéos)',
       min: 1,
       max: 'contentLeft',
-      default: 'contentNew',
+      default: 'contentLeft',
     },
   },
   actions: {
@@ -263,7 +263,7 @@ export interface RoomView {
     id: GameId;
     launchable: boolean;
     reason: 'NOT_ENOUGH_PLAYERS' | 'TOO_MANY_PLAYERS' | null; // étape 4 : + 'NO_CONTENT_LEFT'
-    // étape 4 : contentLeft (pas encore joué dans ce salon), contentNew (vu par personne)
+    content: { left: number } | null; // contenu pas encore joué dans ce salon
   }[];
   // Classement final (statut 'results') : { playerId, nickname, score, rank }
   results: { gameId: GameId; ranking: RankingEntry[] } | null;
@@ -272,16 +272,16 @@ export interface RoomView {
 
 ### 3.3 API HTTP
 
-| Route                                 | Auth   | Rôle                                                                                             |
-| ------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
-| `GET /api/health`                     | —      | supervision                                                                                      |
-| `GET /api/games`                      | —      | métadonnées et réglages des jeux (accueil, salon)                                                |
-| `POST /api/rooms`                     | —      | `{ nickname, history }` → `{ code, token }` ; l'appelant devient hôte                            |
-| `POST /api/rooms/join`                | —      | `{ code, nickname, history }` → `{ code, token }` ; le code est dans le corps, jamais dans l'URL |
-| `POST /api/uploads/:kind`             | Bearer | corps binaire + en-tête `X-Upload-Meta` (JSON) → confié au jeu en cours                          |
-| `GET /api/media/:mediaId`             | Bearer | prise privée, si le jeu l'autorise à cet instant                                                 |
-| `GET /api/content/:gameId/:contentId` | Bearer | vidéo, si le jeu l'expose à cet instant                                                          |
-| `GET /*`                              | —      | client compilé (prod) ; `index.html` pour les routes de l'application                            |
+| Route                                 | Auth   | Rôle                                                                                    |
+| ------------------------------------- | ------ | --------------------------------------------------------------------------------------- |
+| `GET /api/health`                     | —      | supervision                                                                             |
+| `GET /api/games`                      | —      | métadonnées et réglages des jeux (accueil, salon)                                       |
+| `POST /api/rooms`                     | —      | `{ nickname }` → `{ code, token }` ; l'appelant devient hôte                            |
+| `POST /api/rooms/join`                | —      | `{ code, nickname }` → `{ code, token }` ; le code est dans le corps, jamais dans l'URL |
+| `POST /api/uploads/:kind`             | Bearer | corps binaire + en-tête `X-Upload-Meta` (JSON) → confié au jeu en cours                 |
+| `GET /api/media/:mediaId`             | Bearer | prise privée, si le jeu l'autorise à cet instant                                        |
+| `GET /api/content/:gameId/:contentId` | Bearer | vidéo, si le jeu l'expose à cet instant                                                 |
+| `GET /*`                              | —      | client compilé (prod) ; `index.html` pour les routes de l'application                   |
 
 ### 3.4 Codes d'erreur
 
@@ -314,7 +314,6 @@ interface Player {
   socketId: string | null; // null = déconnecté
   disconnectedAt: number | null;
   role: 'player' | 'waiting';
-  history: Map<GameId, Set<ContentId>>; // « déjà vu » déclaré par l'appareil
 }
 ```
 
@@ -423,13 +422,13 @@ Aides communes : `Barrier` (qui a fini, complet par rapport aux joueurs attendus
 - Une liste par jeu, `CONTENT_DIR/<gameId>/selection.txt`, écrite à la main (§7.5), **lue et validée au démarrage**. Pour chaque ligne :
   - le fichier doit être un simple nom, sans `/` ni `..`, présent dans le dossier et en `.mp4` ;
   - le serveur lit lui-même l'en-tête MP4 pour obtenir la durée et les codecs (sans ffmpeg). Il exige H.264 + AAC et une durée de 1 à 30 s ;
-  - l'id de contenu est le nom du fichier, sans extension et normalisé en `[a-z0-9-]`. Il reste stable d'une soirée à l'autre, ce qui compte pour l'historique « déjà vu ».
+  - l'id de contenu est le nom du fichier, sans extension et normalisé en `[a-z0-9-]` : il sert à ne jamais rejouer une vidéo dans un même salon.
 
   Une ligne invalide est écartée avec un avertissement clair, sans empêcher le serveur de démarrer. `npm run content:check` affiche le bilan complet.
 
 - **Règle ferme** : un contenu n'est jamais proposé deux fois dans un salon (`room.played`).
-- **Préférence** : les vidéos inédites pour tous les joueurs présents passent d'abord (d'après l'historique envoyé par leurs appareils), dans un ordre aléatoire ; viennent ensuite les moins vues.
-- **Réglages liés au contenu** : `contentLeft` (pas encore joué dans le salon) et `contentNew` (inédit pour tous les présents) sont recalculés à chaque arrivée ou départ de joueur et affichés dans le salon. S'il ne reste aucun contenu, le jeu ne peut pas être lancé.
+- **Choix** : une vidéo au hasard parmi celles pas encore jouées dans le salon.
+- **Réglages liés au contenu** : `contentLeft` (pas encore joué dans le salon) est recalculé et affiché dans le salon ; il sert de maximum et de valeur par défaut au nombre de manches. S'il ne reste aucun contenu, le jeu ne peut pas être lancé.
 - Une vidéo est marquée jouée au début de sa diffusion. Si l'hôte termine la partie plus tôt, les vidéos non diffusées restent disponibles.
 - La liste n'est jamais envoyée aux clients : on n'expose que la vidéo de la manche en cours (id et durée ; le titre apparaît au classement de la manche).
 
@@ -477,7 +476,7 @@ Aides communes : `Barrier` (qui a fini, complet par rapport aux joueurs attendus
 ### 5.1 Session et état
 
 - Un `SessionStore` (store externe lu avec `useSyncExternalStore`) contient `{ connection, room, game: { gameId, seq, view }, clock }`. Hooks : `useRoom()`, `useGameView<V>()`, `useServerNow()`, `useAct()`.
-- Le jeton est en sessionStorage. L'historique « déjà vu » est en localStorage : ids par jeu, 500 au maximum, mis à jour quand une diffusion commence, avec un bouton « Oublier mon historique » sur l'accueil.
+- Le jeton est en sessionStorage (propre à chaque onglet). Seul le dernier pseudo utilisé est gardé en localStorage, par confort.
 
 ### 5.2 Routes
 
@@ -487,7 +486,7 @@ Aides communes : `Barrier` (qui a fini, complet par rapport aux joueurs attendus
 | `/join/:code` | accueil avec le code prérempli (converti en majuscules)                                                                                   |
 | `/room/:code` | salon, partie ou résultats. Sans jeton → redirection vers `/join/:code`                                                                   |
 
-Dans le salon : code en grand, bouton « Copier le lien », liste des joueurs avec leur état, choix du jeu et des réglages pour l'hôte (avec le nombre de vidéos inédites et une estimation de la durée).
+Dans le salon : code en grand, bouton « Copier le lien », liste des joueurs avec leur état, choix du jeu et des réglages pour l'hôte (avec le nombre de vidéos restantes).
 
 ### 5.3 Son et lecture automatique
 
@@ -563,12 +562,12 @@ Registres : `server/src/games/registry.ts` et `client/src/games/registry.ts` con
 
 ```
 Hôte                                  Serveur                                   Ami
-POST /api/rooms {nickname, history} ─▶ code unique, joueur hôte, jeton
+POST /api/rooms {nickname} ─▶ code unique, joueur hôte, jeton
                ◀─ {code, token}        (token → sessionStorage)
 io.connect(auth: {token}) ───────────▶ origine + jeton vérifiés → socket rattaché
                ◀─ room:state
 lien /join/ABC123 ──────────────────────────────────────────────────────────▶ ouvre le lien
-                                       ◀─ POST /api/rooms/join {code, nickname, history}
+                                       ◀─ POST /api/rooms/join {code, nickname}
                                        débit, codes faux, salon plein, pseudo pris
                                        ─▶ {code, token}
                                        ◀─ io.connect(auth: {token})
@@ -611,7 +610,7 @@ loading      pick() d'une vidéo, syncId
              vue {video, syncId, ready}      ────▶ GET /api/content/dubbing/<id> (Bearer) → Blob
                                              ◀──── game:action ready {syncId}
              tous les connectés prêts | skip
-broadcast    vue {startAt}                   ────▶ lecture avec le son à startAt ; vidéo notée « déjà vue »
+broadcast    vue {startAt}                   ────▶ lecture avec le son à startAt
              minuterie : fin de vidéo + 0,5 s
 recording    vue {validated: [...]}          ────▶ revoir / enregistrer / réécouter / recommencer (en local)
                                              ◀──── POST /api/uploads/take (audio + offsetMs) = validation
@@ -650,7 +649,7 @@ Hôte : game:skip, après une confirmation qui liste les joueurs qu'on n'attendr
 
 ### 7.1 Machine à états
 
-> **État à l'étape 4** : phases `loading` → `broadcast` → `recording` → `roundResults` (provisoire : les prises y sont supprimées, sans présentation). L'étape 5 insère `takeLoading`, `takePlaying`, `voting` et `reveal` entre `recording` et `roundResults`, et déplace la suppression des prises après la présentation.
+> **Implémentée à l'étape 5** telle que décrite ci-dessous. Détails : les étapes de chargement n'attendent que les joueurs connectés ; « Passer à la suite » existe à chaque étape d'attente (chargement, diffusion, enregistrement, prise, vote) ; les prises sont supprimées à l'entrée de `roundResults`, une fois la présentation finie.
 
 ```
  loading ──(tous prêts | skip)──▶ broadcast ──(fin de vidéo)──▶ recording
@@ -771,7 +770,7 @@ Tu prépares toi-même les extraits : déjà coupés, en MP4 (H.264 + AAC, le fo
 3. `npm run content:check` (étape 4) vérifie chaque ligne (fichier présent, format, durée) et affiche la liste retenue.
 4. Redémarre le serveur, qui relit la liste au démarrage.
 
-Pour une nouvelle soirée, il suffit d'ajouter de nouveaux fichiers et leurs lignes. Les vidéos déjà vues par les joueurs présents sont écartées par défaut, grâce à l'historique de leurs navigateurs. Évite simplement de réutiliser un nom de fichier pour une autre vidéo : l'id vient du nom.
+Pour une nouvelle soirée, il suffit d'ajouter de nouveaux fichiers et leurs lignes (et de retirer les anciens si tu ne veux plus les proposer). Évite de réutiliser un nom de fichier pour une autre vidéo : l'id vient du nom.
 
 - **Pas de lecture directe depuis YouTube, TikTok…**, pour trois raisons :
   - le lecteur intégré enverrait l'IP de chaque joueur à un tiers, ce qu'interdit le cahier des charges ;
@@ -815,7 +814,7 @@ Dépendances de développement : `typescript`, `vite`, `@vitejs/plugin-react`, `
   - `GameRunner`, testé avec le jeu fictif (phase, hôte, participant, annulation des minuteries, « Passer à la suite », fin) ;
   - logique de Doublage, avec le banc de test ;
   - lecture de `selection.txt` et des en-têtes MP4 (durée, codecs) ;
-  - côté client, les fonctions pures : calcul du décalage d'horloge, calcul du départ synchronisé, choix du format d'enregistrement, historique.
+  - côté client, les fonctions pures : calcul du décalage d'horloge, calcul du départ synchronisé, choix du format d'enregistrement.
 - **Intégration** : routes HTTP avec `fastify.inject` (création, rejoindre, limites, en-têtes, envois) ; vrai serveur Socket.IO sur un port éphémère avec `socket.io-client` et le jeu fictif enregistré pour le test (lancement, actions, vues par joueur, reconnexion, retour au salon).
 - **Bout en bout** (étape 7) : Playwright avec Chromium, le moteur de Chrome et Brave, donc la cible réelle. Un contexte de navigateur par joueur, faux micro (`--use-fake-device-for-media-stream`, `--use-file-for-fake-audio-capture`).
 - **Tests manuels** : à chaque étape, une procédure sur Chrome, puis une vérification sur Brave.
@@ -828,7 +827,7 @@ Dépendances de développement : `typescript`, `vite`, `@vitejs/plugin-react`, `
 | 3. Plugins         | moteur (`defineGame`, `GameRunner`, contexte, minuteries, banc de test) validé par le jeu fictif ; côté salon : choix du jeu, réglages génériques, lancement, abandon, « Passer à la suite », écran de résultats ; registres ; `Scoreboard`, `RankingScreen`, `Countdown` ; galerie des composants (dev). Sans jeu réel, le test manuel se limite à la galerie ; le lancement d'une partie est couvert par les tests d'intégration, puis testé à la main dès l'étape 4. |
 | 4. Doublage (1)    | bibliothèque de contenu (`selection.txt`, en-têtes MP4) + `npm run content:check` ; `MediaStore` + envoi + signatures ; `SyncedVideoPlayer`, « Activer le son » ; `AudioRecorder`, `LevelMeter` ; phases `loading` → `recording` ; tests                                                                                                                                                                                                                                |
 | 5. Doublage (2)    | présentation synchronisée (`takeLoading`, `takePlaying`) ; lecture des prises et règles d'accès ; `VotePanel`, `VoteReveal` ; règles de vote ; tests                                                                                                                                                                                                                                                                                                                    |
-| 6. Doublage (3)    | enchaînement des manches, classements intermédiaires et final, « Terminer la partie » ; nombre de manches par défaut = vidéos inédites ; suivi du contenu joué (salon + historique des appareils) ; suppression des prises en fin de manche ; tests                                                                                                                                                                                                                     |
+| 6. Doublage (3)    | enchaînement des manches, classements intermédiaires et final, « Terminer la partie » ; vérifications finales ; suppression des prises en fin de manche ; tests                                                                                                                                                                                                                                                                                                         |
 | 7. Sécurité et E2E | passe sécurité complète, tests Playwright multi-joueurs, corrections, rapport des risques restants                                                                                                                                                                                                                                                                                                                                                                      |
 | 8. Déploiement     | build de production, variables d'environnement, HTTPS (Caddy), recommandations d'hébergement, copie du contenu                                                                                                                                                                                                                                                                                                                                                          |
 

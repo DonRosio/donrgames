@@ -23,8 +23,8 @@ export type SettingDef =
       min: number;
       /** 'contentLeft': number of content items not played yet in the room. */
       max: number | 'contentLeft';
-      /** 'contentNew': items nobody present has seen (falls back to contentLeft when zero). */
-      default: number | 'contentNew';
+      /** 'contentLeft': every item not played yet in the room. */
+      default: number | 'contentLeft';
     }
   | {
       kind: 'choice';

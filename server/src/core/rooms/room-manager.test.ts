@@ -70,12 +70,12 @@ describe('RoomManager', () => {
 
   beforeEach(() => {
     t = setup();
-    host = t.rooms.createRoom({ nickname: '  Léa ', history: {} });
+    host = t.rooms.createRoom({ nickname: '  Léa ' });
     t.rooms.attachSocket(host, 'socket-host');
   });
 
   const join = (nickname: string, socketId?: string) => {
-    const session = t.rooms.joinRoom({ code: host.room.code, nickname, history: {} });
+    const session = t.rooms.joinRoom({ code: host.room.code, nickname });
     if (socketId) t.rooms.attachSocket(session, socketId);
     return session;
   };
@@ -94,52 +94,39 @@ describe('RoomManager', () => {
 
     it('never reuses the code of an active room', () => {
       const s = setup({ codes: ['AAAAAA', 'AAAAAA', 'BBBBBB'] });
-      expect(s.rooms.createRoom({ nickname: 'Un', history: {} }).room.code).toBe('AAAAAA');
-      expect(s.rooms.createRoom({ nickname: 'Deux', history: {} }).room.code).toBe('BBBBBB');
+      expect(s.rooms.createRoom({ nickname: 'Un' }).room.code).toBe('AAAAAA');
+      expect(s.rooms.createRoom({ nickname: 'Deux' }).room.code).toBe('BBBBBB');
     });
 
     it('limits the number of active rooms', () => {
       const s = setup({ maxRooms: 1 });
-      s.rooms.createRoom({ nickname: 'Un', history: {} });
-      expect(errorCode(() => s.rooms.createRoom({ nickname: 'Deux', history: {} }))).toBe(
-        'TOO_MANY_ROOMS',
-      );
+      s.rooms.createRoom({ nickname: 'Un' });
+      expect(errorCode(() => s.rooms.createRoom({ nickname: 'Deux' }))).toBe('TOO_MANY_ROOMS');
     });
 
     it('rejects invalid nicknames with a precise code', () => {
-      expect(errorCode(() => t.rooms.createRoom({ nickname: 'A', history: {} }))).toBe(
-        'NICKNAME_TOO_SHORT',
-      );
+      expect(errorCode(() => t.rooms.createRoom({ nickname: 'A' }))).toBe('NICKNAME_TOO_SHORT');
       expect(errorCode(() => join('<script>'))).toBe('NICKNAME_INVALID');
     });
 
     it('rejects unknown codes, full rooms and duplicate nicknames', () => {
-      expect(
-        errorCode(() => t.rooms.joinRoom({ code: 'ZZZZZZ', nickname: 'Tom', history: {} })),
-      ).toBe('ROOM_NOT_FOUND');
+      expect(errorCode(() => t.rooms.joinRoom({ code: 'ZZZZZZ', nickname: 'Tom' }))).toBe(
+        'ROOM_NOT_FOUND',
+      );
       expect(errorCode(() => join('LÉA'))).toBe('NICKNAME_TAKEN');
 
       const s = setup({ maxPlayersPerRoom: 2 });
-      const h = s.rooms.createRoom({ nickname: 'Un', history: {} });
-      s.rooms.joinRoom({ code: h.room.code, nickname: 'Deux', history: {} });
-      expect(
-        errorCode(() => s.rooms.joinRoom({ code: h.room.code, nickname: 'Trois', history: {} })),
-      ).toBe('ROOM_FULL');
-    });
-
-    it('keeps the declared history of each device', () => {
-      const session = t.rooms.joinRoom({
-        code: host.room.code,
-        nickname: 'Tom',
-        history: { dubbing: ['raclette', 'herve1'] },
-      });
-      expect([...(session.player.history.get('dubbing') ?? [])]).toEqual(['raclette', 'herve1']);
+      const h = s.rooms.createRoom({ nickname: 'Un' });
+      s.rooms.joinRoom({ code: h.room.code, nickname: 'Deux' });
+      expect(errorCode(() => s.rooms.joinRoom({ code: h.room.code, nickname: 'Trois' }))).toBe(
+        'ROOM_FULL',
+      );
     });
   });
 
   describe('sessions', () => {
     it('authenticates with the token only, which is stored hashed', () => {
-      const session = t.rooms.joinRoom({ code: host.room.code, nickname: 'Tom', history: {} });
+      const session = t.rooms.joinRoom({ code: host.room.code, nickname: 'Tom' });
       expect(t.rooms.authenticate(session.token)?.player).toBe(session.player);
       expect(t.rooms.authenticate('forged-token')).toBeNull();
       expect(session.player.tokenHash).not.toContain(session.token);
@@ -254,7 +241,7 @@ describe('RoomManager', () => {
 
     it('closes a room nobody ever connected to after 10 minutes', () => {
       const s = setup();
-      const lonely = s.rooms.createRoom({ nickname: 'Solo', history: {} });
+      const lonely = s.rooms.createRoom({ nickname: 'Solo' });
       s.advance(10 * MINUTE);
       expect(s.log.closed).toEqual([{ room: lonely.room, reason: 'expired' }]);
     });

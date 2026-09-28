@@ -11,8 +11,9 @@ const videos = [
   { id: 'chat', title: 'Chat', durationMs: 8_000 },
 ];
 const take = { offsetMs: 40, durationMs: 10_000 };
+const PLAYERS = ['alice', 'bob', 'carol'];
 
-function play(rounds = 2, players = ['alice', 'bob', 'carol']) {
+function play(rounds = 2, players = PLAYERS) {
   return createHarness(dubbingGame, { players, settings: { rounds }, content: videos });
 }
 
@@ -20,18 +21,26 @@ type G = ReturnType<typeof play>;
 const view = <P extends DubbingView['phase']>(g: G, player: string, phase: P) => {
   const v = g.view(player);
   expect(v.phase).toBe(phase);
-  return v as Extract<DubbingView, { phase: P }>;
+  return v as DubbingView & { phase: P };
 };
-const readyAll = (g: G, players = ['alice', 'bob', 'carol']) => {
-  const { syncId } = view(g, players[0]!, 'loading');
-  for (const player of players) g.act(player, 'ready', { syncId });
+const readyAll = (g: G, players = PLAYERS) => {
+  const v = g.view(players[0]!) as { syncId: string };
+  for (const player of players) g.act(player, 'ready', { syncId: v.syncId });
 };
 const toRecording = (g: G) => {
   readyAll(g);
   g.advance(SYNC_LEAD_MS + 30_000);
 };
+/** Everybody records, then the first take is loaded and played: now voting. */
+const toVoting = (g: G, players = PLAYERS) => {
+  toRecording(g);
+  for (const player of players) g.upload(player, 'take', take);
+  readyAll(g, players);
+  g.advance(SYNC_LEAD_MS + 30_000);
+  return view(g, players[0]!, 'voting');
+};
 
-describe('Doublage', () => {
+describe('Doublage: loading, broadcast and recording', () => {
   it('is a valid definition', () => {
     expect(() => validateGameDefinition(dubbingGame)).not.toThrow();
   });
@@ -49,8 +58,7 @@ describe('Doublage', () => {
     expect(g.phase).toBe('loading');
     g.act('carol', 'ready', { syncId: loading.syncId });
 
-    const broadcast = view(g, 'bob', 'broadcast');
-    expect(broadcast.startAt).toBe(g.clock.now() + SYNC_LEAD_MS);
+    expect(view(g, 'bob', 'broadcast').startAt).toBe(g.clock.now() + SYNC_LEAD_MS);
     expect(g.played).toEqual([loading.video.contentId]);
   });
 
@@ -105,67 +113,172 @@ describe('Doublage', () => {
     expect(g.upload('mallory', 'take', take)).toEqual({ ok: false, error: 'NOT_PARTICIPANT' });
   });
 
-  it('ends the recording when every awaited player validated, and deletes the takes', () => {
+  it('never lets anyone hear a take during the recording', () => {
+    const g = play();
+    toRecording(g);
+    g.upload('alice', 'take', take);
+    expect(g.canRead('alice', { kind: 'media', id: 'file-1' })).toBe(false);
+    expect(g.canRead('bob', { kind: 'media', id: 'file-1' })).toBe(false);
+  });
+
+  it('stops waiting for a player disconnected for too long', () => {
     const g = play();
     toRecording(g);
     g.upload('alice', 'take', take);
     g.upload('bob', 'take', take);
     g.disconnect('carol');
-    g.advance(60_000);
-    const results = view(g, 'alice', 'roundResults');
-    expect(results.validated).toEqual(['alice', 'bob']);
-    expect(g.discarded).toEqual(['file-1', 'file-2']);
+    g.advance(59_000);
+    expect(g.phase).toBe('recording');
+    g.advance(1_000);
+    expect(g.phase).toBe('takeLoading');
   });
 
-  it('never lets anyone download a take (the presentation is not there yet)', () => {
+  it('goes straight to the end of the round when nobody recorded', () => {
     const g = play();
     toRecording(g);
-    g.upload('alice', 'take', take);
-    expect(g.canRead('bob', { kind: 'media', id: 'file-1' })).toBe(false);
+    g.skip();
+    expect(view(g, 'alice', 'roundResults').scores.every((s) => s.roundPoints === 0)).toBe(true);
   });
+});
 
-  it('lets the host skip each waiting step', () => {
+describe('Doublage: presentation and votes', () => {
+  it('presents the takes one by one in a random order, synchronized', () => {
     const g = play();
-    g.skip();
-    expect(g.phase).toBe('broadcast');
-    g.skip();
-    expect(g.phase).toBe('recording');
-    g.skip();
-    expect(g.phase).toBe('roundResults');
+    toRecording(g);
+    for (const player of PLAYERS) g.upload(player, 'take', take);
+    const loading = view(g, 'alice', 'takeLoading');
+    expect(loading).toMatchObject({ index: 1, count: 3, startAt: null });
+    expect(PLAYERS).toContain(loading.presenter);
+    readyAll(g);
+    const playing = view(g, 'bob', 'takePlaying');
+    expect(playing.startAt).toBe(g.clock.now() + SYNC_LEAD_MS);
+    expect(playing.take.offsetMs).toBe(40);
   });
 
-  it('plays the chosen number of rounds with different videos, then ends', () => {
+  it('lets everyone hear the presented take only, during its presentation', () => {
+    const g = play();
+    toRecording(g);
+    for (const player of PLAYERS) g.upload(player, 'take', take);
+    const { presenter, take: presented } = view(g, 'alice', 'takeLoading');
+    const other = ['file-1', 'file-2', 'file-3'].find((id) => id !== presented.mediaId)!;
+    for (const player of PLAYERS) {
+      expect(g.canRead(player, { kind: 'media', id: presented.mediaId })).toBe(true);
+      expect(g.canRead(player, { kind: 'media', id: other })).toBe(false);
+    }
+    expect(PLAYERS).toContain(presenter);
+  });
+
+  it('enforces the voting rules', () => {
+    const g = play();
+    const voting = toVoting(g);
+    const [voter, otherVoter] = PLAYERS.filter((p) => p !== voting.presenter) as [string, string];
+    expect(g.act(voting.presenter, 'vote', { points: 1 })).toEqual({
+      ok: false,
+      error: 'SELF_VOTE',
+    });
+    expect(g.act(voter, 'vote', { points: 3 })).toEqual({ ok: false, error: 'INVALID_PAYLOAD' });
+    expect(g.act(voter, 'vote', { points: 2 })).toEqual({ ok: true });
+    expect(g.act(voter, 'vote', { points: 1 })).toEqual({ ok: false, error: 'ALREADY_VOTED' });
+    // Nobody sees the value of a vote before the reveal.
+    expect(view(g, otherVoter, 'voting')).toMatchObject({ voted: [voter], myVote: null });
+    expect(view(g, voter, 'voting')).toMatchObject({ myVote: 2, canUsePlusTwo: false });
+    g.act(otherVoter, 'vote', { points: 0 });
+    expect(view(g, voter, 'reveal')).toMatchObject({
+      presenter: voting.presenter,
+      total: 2,
+      votes: expect.arrayContaining([
+        { voter, points: 2 },
+        { voter: otherVoter, points: 0 },
+      ]),
+    });
+  });
+
+  it('allows the +2 only once per round and per voter', () => {
+    const g = play();
+    const first = toVoting(g);
+    const voter = PLAYERS.find((p) => p !== first.presenter)!;
+    g.act(voter, 'vote', { points: 2 });
+    g.skip(); // reveal
+    g.act('alice', 'next');
+    readyAll(g);
+    g.advance(SYNC_LEAD_MS + 30_000);
+    const second = view(g, voter, 'voting');
+    if (second.presenter === voter) return; // the voter presents: nothing to check here
+    expect(second.canUsePlusTwo).toBe(false);
+    expect(g.act(voter, 'vote', { points: 2 })).toEqual({ ok: false, error: 'PLUS_TWO_USED' });
+    expect(g.act(voter, 'vote', { points: 1 })).toEqual({ ok: true });
+  });
+
+  it('counts a missing vote as 0 when the host skips, and waits for connected voters only', () => {
+    const g = play();
+    const voting = toVoting(g);
+    const [voter, lazy] = PLAYERS.filter((p) => p !== voting.presenter) as [string, string];
+    g.act(voter, 'vote', { points: 1 });
+    expect(g.phase).toBe('voting');
+    g.skip();
+    expect(view(g, voter, 'reveal')).toMatchObject({
+      total: 1,
+      votes: expect.arrayContaining([{ voter: lazy, points: null }]),
+    });
+  });
+
+  it('scores the round, deletes the takes after the presentation, then plays the next round', () => {
     const g = play(2);
-    for (let round = 1; round <= 2; round++) {
-      g.skip();
-      g.skip();
-      g.skip();
-      expect(view(g, 'alice', 'roundResults')).toMatchObject({ round, last: round === 2 });
+    toVoting(g);
+    for (let presented = 0; presented < 3; presented++) {
+      const voting = view(g, 'alice', 'voting');
+      for (const player of PLAYERS) {
+        if (player !== voting.presenter) g.act(player, 'vote', { points: 1 });
+      }
       expect(g.act('bob', 'next')).toEqual({ ok: false, error: 'NOT_HOST' });
       g.act('alice', 'next');
+      if (presented < 2) {
+        readyAll(g);
+        g.advance(SYNC_LEAD_MS + 30_000);
+      }
     }
-    expect(g.ended).toBe(true);
-    expect(new Set(g.played).size).toBe(2);
+    const results = view(g, 'alice', 'roundResults');
+    expect(results.scores).toEqual(
+      expect.arrayContaining(PLAYERS.map((playerId) => ({ playerId, roundPoints: 2, total: 2 }))),
+    );
+    expect(results.last).toBe(false);
+    expect([...g.discarded].sort()).toEqual(['file-1', 'file-2', 'file-3']);
+
+    g.act('alice', 'next');
+    expect(view(g, 'alice', 'loading').round).toBe(2);
   });
 
-  it('lets the host end the game after any round', () => {
-    const g = play(3);
+  it('ends after the chosen number of rounds, or when the host decides', () => {
+    const g = play(1);
+    toRecording(g);
     g.skip();
-    g.skip();
-    g.skip();
-    g.act('alice', 'finish');
+    expect(view(g, 'alice', 'roundResults').last).toBe(true);
+    g.act('alice', 'next');
     expect(g.ended).toBe(true);
+
+    const early = play(3);
+    toRecording(early);
+    early.skip();
+    early.act('alice', 'finish');
+    expect(early.ended).toBe(true);
   });
 
   it('stops when the content runs out', () => {
     const g = play(10);
     for (let round = 1; round <= 3; round++) {
-      g.skip();
-      g.skip();
+      toRecording(g);
       g.skip();
       expect(view(g, 'alice', 'roundResults').last).toBe(round === 3);
       g.act('alice', 'next');
     }
     expect(g.ended).toBe(true);
+  });
+
+  it('works with two players (a single voter per take)', () => {
+    const g = play(1, ['alice', 'bob']);
+    const voting = toVoting(g, ['alice', 'bob']);
+    const voter = voting.presenter === 'alice' ? 'bob' : 'alice';
+    g.act(voter, 'vote', { points: 2 });
+    expect(view(g, 'alice', 'reveal').total).toBe(2);
   });
 });

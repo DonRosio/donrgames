@@ -3,7 +3,6 @@ import type { SettingDef, SettingValue } from '@mini-jeux/shared';
 /** Content counts of the room, for settings bounded by the content left. */
 export interface ContentCounts {
   left: number;
-  new: number;
 }
 
 export type SettingLimits = Record<string, { min: number; max: number }>;
@@ -21,9 +20,7 @@ export function settingLimits(defs: Defs, counts: ContentCounts | null): Setting
 }
 
 function defaultOf(def: SettingDef, counts: ContentCounts | null): SettingValue {
-  if (def.kind === 'int' && def.default === 'contentNew') {
-    return counts && counts.new > 0 ? counts.new : (counts?.left ?? 0);
-  }
+  if (def.kind === 'int' && def.default === 'contentLeft') return counts?.left ?? 0;
   return def.default;
 }
 

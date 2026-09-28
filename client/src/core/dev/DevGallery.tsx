@@ -8,6 +8,8 @@ import { Countdown } from '../ui/Countdown.tsx';
 import { PlayerList } from '../ui/PlayerList.tsx';
 import { RankingScreen } from '../ui/RankingScreen.tsx';
 import { Scoreboard } from '../ui/Scoreboard.tsx';
+import { VotePanel } from '../ui/VotePanel.tsx';
+import { VoteReveal } from '../ui/VoteReveal.tsx';
 import styles from './DevGallery.module.css';
 
 // Sample data only: this page is a visual check of the shared components (development mode).
@@ -47,6 +49,8 @@ export function DevGallery() {
   });
   const [deadline, setDeadline] = useState(() => localNow() + 10_000);
   const [confirming, setConfirming] = useState(false);
+  const [vote, setVote] = useState<number | null>(null);
+  const [revealKey, setRevealKey] = useState(0);
 
   return (
     <main className={styles.page}>
@@ -79,6 +83,37 @@ export function DevGallery() {
             Retour au salon
           </button>
         </RankingScreen>
+      </Section>
+
+      <Section title="VotePanel">
+        <VotePanel<number>
+          chosen={vote}
+          onVote={setVote}
+          options={[
+            { value: 0, label: '0' },
+            { value: 1, label: '+1' },
+            { value: 2, label: '+2', disabledReason: 'déjà utilisé cette manche' },
+          ]}
+        />
+        <button type="button" className="btn btn-small" onClick={() => setVote(null)}>
+          Réinitialiser
+        </button>
+      </Section>
+
+      <Section title="VoteReveal">
+        <VoteReveal
+          key={revealKey}
+          total={3}
+          votes={[
+            { voter: 'Tom', points: 2 },
+            { voter: 'Zoé', points: 0 },
+            { voter: 'Hervé', points: 1 },
+            { voter: 'Max', points: null },
+          ]}
+        />
+        <button type="button" className="btn btn-small" onClick={() => setRevealKey((k) => k + 1)}>
+          Rejouer l'animation
+        </button>
       </Section>
 
       <Section title="Countdown">

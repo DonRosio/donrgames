@@ -46,7 +46,6 @@ export function registerRoomRoutes(
     const { room, token } = rooms.joinRoom({
       code,
       nickname: body.nickname,
-      history: body.history,
     });
     request.log.info({ room: room.id }, 'player joined');
     const response: SessionResponse = { code: room.code, token };

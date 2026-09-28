@@ -1,0 +1,96 @@
+.reveal {
+  display: grid;
+  gap: 16px;
+  max-width: 460px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: var(--radius-small);
+  background: var(--surface-raised);
+  opacity: 0;
+  animation: appear 300ms ease-out var(--delay) forwards;
+}
+
+.voter {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* The points pop in, then fade to a discreet reminder. */
+.points {
+  color: var(--accent);
+  font-size: 1.6rem;
+  font-weight: 900;
+  opacity: 0;
+  animation: pop-then-fade 1600ms ease-out var(--delay) forwards;
+}
+
+.zero {
+  color: var(--text-muted);
+  opacity: 0;
+  animation: appear 300ms ease-out var(--delay) forwards;
+}
+
+.total {
+  font-size: 1.5rem;
+  text-align: center;
+  opacity: 0;
+  animation: appear 400ms ease-out var(--delay) forwards;
+}
+
+.total strong {
+  color: var(--accent);
+  font-size: 2rem;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop-then-fade {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+  45% {
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  .points,
+  .zero,
+  .total {
+    animation-duration: 1ms;
+  }
+}

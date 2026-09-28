@@ -49,7 +49,7 @@ export function validateGameDefinition(definition: AnyGameDefinition): void {
   for (const [key, setting] of Object.entries(contract.settings)) {
     if (setting.kind === 'int') {
       const max = setting.max === 'contentLeft' ? Infinity : setting.max;
-      const usesContent = setting.max === 'contentLeft' || setting.default === 'contentNew';
+      const usesContent = setting.max === 'contentLeft' || setting.default === 'contentLeft';
       if (usesContent && !definition.content) {
         fail(`setting "${key}" depends on content, but the game has none`);
       }

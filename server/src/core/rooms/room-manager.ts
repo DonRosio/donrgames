@@ -6,7 +6,6 @@ import {
   validateNickname,
 } from '@mini-jeux/shared';
 import type {
-  ContentHistory,
   GameAvailability,
   GameContract,
   GameViewEnvelope,
@@ -81,8 +80,6 @@ export interface Player {
   role: 'player' | 'waiting';
   /** The running game was told it should no longer wait for this player. */
   unawaited: boolean;
-  /** "Already seen" content ids declared by the device, per game. */
-  history: Map<string, Set<string>>;
 }
 
 export interface Room {
@@ -196,7 +193,7 @@ export class RoomManager {
 
   // ---------------------------------------------------------------- rooms and players
 
-  createRoom(input: { nickname: string; history: ContentHistory }): NewSession {
+  createRoom(input: { nickname: string }): NewSession {
     if (this.#rooms.size >= this.#limits.maxRooms) throw new DomainError('TOO_MANY_ROOMS');
     const nickname = checkNickname(input.nickname);
     const now = this.#clock.now();
@@ -217,14 +214,14 @@ export class RoomManager {
       lastActionAt: now,
       noConnectedSince: now,
     };
-    const { player, token } = this.#addPlayer(room, nickname, input.history);
+    const { player, token } = this.#addPlayer(room, nickname);
     room.hostId = player.id;
     this.#rooms.set(room.code, room);
     return { room, player, token };
   }
 
   /** `code` must already be normalized. */
-  joinRoom(input: { code: string; nickname: string; history: ContentHistory }): NewSession {
+  joinRoom(input: { code: string; nickname: string }): NewSession {
     const room = this.#rooms.get(input.code);
     if (!room) throw new DomainError('ROOM_NOT_FOUND');
     if (room.players.size >= this.#limits.maxPlayersPerRoom) throw new DomainError('ROOM_FULL');
@@ -233,7 +230,7 @@ export class RoomManager {
     for (const other of room.players.values()) {
       if (nicknameKey(other.nickname) === key) throw new DomainError('NICKNAME_TAKEN');
     }
-    const { player, token } = this.#addPlayer(room, nickname, input.history);
+    const { player, token } = this.#addPlayer(room, nickname);
     this.#touch(room);
     this.#events.roomChanged(room);
     return { room, player, token };
@@ -370,7 +367,7 @@ export class RoomManager {
       runId: this.#random.id(6),
       participants,
       settings,
-      content: this.#contentAccess(room, gameId, participants),
+      content: this.#contentAccess(room, gameId),
       media: { discard: (id) => this.#discardMedia(room, id) },
       roster: this.#roster(room, participants, nicknames),
       clock: this.#clock,
@@ -614,13 +611,10 @@ export class RoomManager {
     const gameId = contractOf(game).meta.id;
     const items = this.#content.get(gameId)?.items ?? [];
     const played = room.played.get(gameId);
-    const left = items.filter((item) => !played?.has(item.id));
-    const seen = (item: ContentItem) =>
-      [...room.players.values()].some((player) => player.history.get(gameId)?.has(item.id));
-    return { left: left.length, new: left.filter((item) => !seen(item)).length };
+    return { left: items.filter((item) => !played?.has(item.id)).length };
   }
 
-  #contentAccess(room: Room, gameId: string, participants: readonly string[]): ContentAccess {
+  #contentAccess(room: Room, gameId: string): ContentAccess {
     const items = this.#content.get(gameId)?.items ?? [];
     const played = () => room.played.get(gameId) ?? new Set<string>();
     return {
@@ -628,14 +622,7 @@ export class RoomManager {
       pick: () => {
         const left = items.filter((item) => !played().has(item.id));
         if (left.length === 0) return null;
-        // Prefer the items seen by the fewest participants (ideally nobody).
-        const seenBy = (item: ContentItem) =>
-          participants.filter((id) => room.players.get(id)?.history.get(gameId)?.has(item.id))
-            .length;
-        const fewest = Math.min(...left.map(seenBy));
-        const item = this.#gameRandom.pick(
-          left.filter((candidate) => seenBy(candidate) === fewest),
-        );
+        const item = this.#gameRandom.pick(left);
         return { id: item.id, title: item.title, durationMs: item.durationMs };
       },
       markPlayed: (id) => {
@@ -714,11 +701,7 @@ export class RoomManager {
     return session;
   }
 
-  #addPlayer(
-    room: Room,
-    nickname: string,
-    history: ContentHistory,
-  ): { player: Player; token: string } {
+  #addPlayer(room: Room, nickname: string): { player: Player; token: string } {
     const token = this.#random.token();
     const player: Player = {
       id: this.#random.id(12),
@@ -730,7 +713,6 @@ export class RoomManager {
       disconnectedAt: this.#clock.now(),
       role: room.status === 'lobby' ? 'player' : 'waiting',
       unawaited: false,
-      history: new Map(Object.entries(history).map(([game, ids]) => [game, new Set(ids)])),
     };
     room.players.set(player.id, player);
     this.#sessions.set(player.tokenHash, { code: room.code, playerId: player.id });
