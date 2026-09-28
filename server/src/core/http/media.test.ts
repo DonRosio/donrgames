@@ -129,4 +129,15 @@ describe('content and media routes', () => {
     await emit(alice, 'room:close');
     expect(server.rooms.media.totalBytes).toBe(0);
   });
+
+  it('deletes an unpresented take when the host aborts the game', async () => {
+    const { alice, aliceToken } = await gameInRecording();
+    await upload(aliceToken, webm(1000));
+    expect(server.rooms.media.totalBytes).toBe(1000);
+    // Aborted before the round reaches roundResults: the game itself never discarded this take.
+    const lobby = stateMatching(alice, (room) => room.status === 'lobby');
+    expect(await emit(alice, 'game:abort')).toEqual({ ok: true, data: null });
+    await lobby;
+    expect(server.rooms.media.totalBytes).toBe(0);
+  });
 });

@@ -731,7 +731,8 @@ type DubbingView =
       phase: 'roundResults';
       videoTitle: string;
       last: boolean;
-      scores: { playerId: PlayerId; roundPoints: number; total: number; rank: number }[];
+      // Le rang n'est pas envoyé : Scoreboard le recalcule à partir de `total` (ex æquo compris).
+      scores: { playerId: PlayerId; roundPoints: number; total: number }[];
     });
 type VideoRef = { contentId: string; durationMs: number };
 ```
