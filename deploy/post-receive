@@ -1,0 +1,18 @@
+#!/bin/sh
+# Hook git : à copier dans ~/mini-jeux/repo.git/hooks/post-receive sur le serveur (chmod +x).
+# Voir docs/deploiement.md. Rien ici ne touche content/ (hors dépôt) ni .env (hors dépôt).
+set -eu
+
+# `systemctl --user` a besoin de ceci quand le hook tourne hors session interactive (git push
+# par SSH). Nécessite `loginctl enable-linger mini-jeux` fait une fois par root (voir la doc).
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+
+WORKTREE="$HOME/mini-jeux/current"
+GIT_DIR="$HOME/mini-jeux/repo.git"
+
+git --work-tree="$WORKTREE" --git-dir="$GIT_DIR" checkout -f main
+cd "$WORKTREE"
+npm ci
+npm run build
+systemctl --user restart mini-jeux
+echo "Déployé : $(git --git-dir="$GIT_DIR" rev-parse --short main)"

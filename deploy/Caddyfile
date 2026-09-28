@@ -1,0 +1,6 @@
+# Reverse proxy HTTPS : voir docs/deploiement.md. Remplace le domaine par le tien.
+# Caddy obtient et renouvelle seul le certificat Let's Encrypt (le domaine doit déjà pointer
+# vers ce serveur), et gère lui-même le passage en WebSocket pour Socket.IO.
+jeux.example.com {
+	reverse_proxy 127.0.0.1:3000
+}

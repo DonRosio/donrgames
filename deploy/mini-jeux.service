@@ -1,0 +1,30 @@
+# Unité systemd --user (pas de root) : voir docs/deploiement.md.
+# Ajuste ExecStart si `which node` diffère (installation Node par la méthode choisie).
+[Unit]
+Description=mini-jeux
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/mini-jeux/current
+EnvironmentFile=%h/mini-jeux/current/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server/src/index.ts
+Restart=on-failure
+RestartSec=5
+# Un plantage laisse tout en RAM : rien à nettoyer avant de redémarrer.
+
+# Durcissement (utilisateur système sans privilège ; état 100 % en RAM, aucune écriture disque).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=default.target

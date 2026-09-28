@@ -63,7 +63,8 @@ mini-jeux/
 ├── tsconfig.base.json · eslint.config.js · .prettierrc · .nvmrc (24) · .env.example
 ├── CLAUDE.md
 ├── playwright.config.ts    tests de bout en bout (Chrome et Brave installés)
-├── docs/                   cahier des charges, architecture, revue de sécurité ; plus tard déploiement
+├── deploy/                 unité systemd (--user), Caddyfile, hook post-receive : voir docs/deploiement.md
+├── docs/                   cahier des charges, architecture, revue de sécurité, déploiement
 ├── scripts/                dev.ts (serveur + client en parallèle), certs.ts (HTTPS local), content-check.ts
 ├── tests/                  registries.test.ts ; e2e/ (serveur de production de test, scénarios Playwright)
 ├── content/                contenus des jeux, hors git (seuls les exemples sont versionnés)
@@ -834,7 +835,7 @@ Revue complète et risques restants : [revue-securite.md](revue-securite.md).
 | 5. Doublage (2)    | présentation synchronisée (`takeLoading`, `takePlaying`) ; lecture des prises et règles d'accès ; `VotePanel`, `VoteReveal` ; règles de vote ; tests                                                                                                                                                                                                                                                                                                                    |
 | 6. Doublage (3)    | enchaînement des manches, classements intermédiaires et final, « Terminer la partie » ; vérifications finales ; suppression des prises en fin de manche ; tests                                                                                                                                                                                                                                                                                                         |
 | 7. Sécurité et E2E | passe sécurité complète, tests Playwright multi-joueurs, corrections, rapport des risques restants                                                                                                                                                                                                                                                                                                                                                                      |
-| 8. Déploiement     | build de production, variables d'environnement, HTTPS (Caddy), recommandations d'hébergement, copie du contenu                                                                                                                                                                                                                                                                                                                                                          |
+| 8. Déploiement     | **[docs/deploiement.md](deploiement.md)** : VPS Debian/Ubuntu, systemd (`--user`), Caddy (HTTPS automatique), déploiement par `git push` (dépôt bare + hook `post-receive`, pas de dépôt GitHub), copie du contenu par `rsync`                                                                                                                                                                                                                                          |
 
 ## 11. Risques et points d'attention
 
