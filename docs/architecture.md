@@ -75,7 +75,7 @@ mini-jeux/
 │   │   ├── schemas.ts      zod : code, pseudo, corps HTTP, charges utiles socket, historique
 │   │   ├── protocol.ts     événements Socket.IO typés, Ack, codes d'erreur
 │   │   ├── room.ts         RoomView, PlayerView
-│   │   └── game.ts         GameMeta, SettingDef, defineContract, GameResults
+│   │   └── game.ts         GameMeta, SettingDef, GameContract, defineContract, types dérivés (PhaseOf, PayloadOf…)
 │   └── games/
 │       └── dubbing.ts      contrat + types de vue
 ├── server/src/
@@ -86,7 +86,8 @@ mini-jeux/
 │   │   ├── http/           security.ts (helmet/CSP, origine), errors.ts, rooms.routes.ts, client.ts ; plus tard uploads/media/content
 │   │   ├── realtime/       io.ts (auth, origine, débit, handlers)
 │   │   ├── rooms/          room-manager.ts (salons, sessions, hôte, expiration via sweep())
-│   │   ├── engine/         define-game.ts, runner.ts, context.ts, scheduler.ts, barrier.ts, harness.ts
+│   │   ├── engine/         types.ts (defineGame), runner.ts, validate.ts, settings.ts, helpers.ts (Barrier, rank),
+│   │   │                   random.ts, scheduler.ts, harness.ts (createHarness)
 │   │   │   └── fixtures/   jeu fictif servant uniquement aux tests du moteur
 │   │   ├── content/        library.ts (selection.txt + en-têtes MP4), tracker.ts (déjà joué)
 │   │   ├── media/          media-store.ts (RAM, TTL, quotas), sniff.ts (signatures de fichiers)
@@ -105,7 +106,8 @@ mini-jeux/
         │   ├── ui/         Scoreboard, RankingScreen, Countdown, VotePanel, VoteReveal, SyncedVideoPlayer,
         │   │               AudioRecorder, LevelMeter, PlayerList, HostBar, ConnectionBanner, SoundUnlock…
         │   ├── pages/      HomePage, RoomPage (salon / partie / résultats)
-        │   ├── game-host/  GameView (choisit l'écran de la phase), SettingsForm (générique)
+        │   ├── game-host/  client-game.ts (defineClientGame), GamePanel + SettingsForm (salon),
+        │   │               GameView (écran de la phase + barre de l'hôte), ResultsView
         │   └── dev/        galerie des composants avec des données d'exemple (mode dev uniquement)
         ├── games/
         │   ├── registry.ts une entrée par jeu
@@ -134,9 +136,11 @@ export type SettingDef =
       kind: 'int';
       label: string;
       min: number;
-      max: number | 'contentLeft'; // 'contentLeft' : nombre de contenus pas encore joués dans le salon
+      // Étape 4 : 'contentLeft' = nombre de contenus pas encore joués dans le salon
+      max: number | 'contentLeft';
+      // Étape 4 : 'contentNew' = inédits pour tous les présents (à défaut, contentLeft)
       default: number | 'contentNew';
-    } // 'contentNew' : inédits pour tous les présents (à défaut, contentLeft)
+    }
   | { kind: 'choice'; label: string; options: { value: string; label: string }[]; default: string }
   | { kind: 'boolean'; label: string; default: boolean };
 
@@ -145,12 +149,15 @@ export interface GameContract {
   phases: readonly string[];
   settings: Record<string, SettingDef>;
   actions: Record<string, { payload: ZodType; hostOnly?: boolean }>; // intentions client → serveur
-  uploads?: Record<string, { meta: ZodType; mimeTypes: readonly string[] }>; // fichiers client → serveur
+  uploads?: Record<string, { meta: ZodType; mimeTypes: readonly string[] }>; // étape 4 : fichiers client → serveur
+  errors: readonly string[]; // codes d'erreur des règles du jeu ; messages français côté client
 }
 export const defineContract = <const C extends GameContract>(contract: C) => contract;
 
-export interface GameResults {
-  ranking: { playerId: PlayerId; score: number; rank: number }[];
+// Scores bruts donnés par le jeu en fin de partie ; le socle calcule le classement (ex æquo inclus).
+export interface ScoreEntry {
+  playerId: string;
+  score: number;
 }
 ```
 
@@ -192,6 +199,7 @@ export const dubbing = defineContract({
     next: { payload: z.object({}), hostOnly: true },
     finish: { payload: z.object({}), hostOnly: true }, // terminer la partie après la manche en cours
   },
+  errors: ['ALREADY_VOTED', 'PLUS_TWO_USED', 'SELF_VOTE', 'TAKE_LOCKED'],
   uploads: {
     take: {
       meta: z.object({
@@ -209,7 +217,7 @@ Le client n'importe les contrats qu'en `import type` : zod reste hors du bundle 
 
 ### 3.2 Protocole temps réel (Socket.IO)
 
-Client → serveur. Chaque événement reçoit un accusé `Ack = { ok: true, data? } | { ok: false, error: ErrorCode }`.
+Client → serveur. Chaque événement reçoit un accusé `Ack = { ok: true, data } | { ok: false, error }`, où `error` est un code du socle ou un code déclaré dans `errors` par le jeu.
 
 | Événement                         | Charge utile                    | Autorisé pour                                            |
 | --------------------------------- | ------------------------------- | -------------------------------------------------------- |
@@ -230,7 +238,7 @@ Serveur → client :
 | Événement       | Contenu                                                                                             |
 | --------------- | --------------------------------------------------------------------------------------------------- |
 | `room:state`    | `RoomView` complet : joueurs, hôte, statut, jeu choisi, réglages, disponibilité des jeux, résultats |
-| `game:view`     | `{ gameId, seq, view }` : la vue de ce joueur ; `seq` croissant pour ignorer une vue périmée        |
+| `game:view`     | `{ gameId, runId, seq, view }` : la vue de ce joueur ; `runId` identifie la partie, `seq` croît     |
 | `session:ended` | `{ reason: 'kicked' \| 'closed' \| 'expired' \| 'replaced' }`                                       |
 
 ```ts
@@ -245,18 +253,20 @@ export interface PlayerView {
 export interface RoomView {
   code: string;
   me: PlayerId;
+  hostId: PlayerId;
   players: PlayerView[];
+  maxPlayers: number;
   status: 'lobby' | 'playing' | 'results';
-  selectedGame: GameId | null;
-  settings: Record<string, unknown>; // réglages choisis par l'hôte, déjà validés
+  // Jeu choisi par l'hôte et ses réglages, déjà validés
+  selectedGame: { id: GameId; settings: Record<string, SettingValue> } | null;
   games: {
     id: GameId;
     launchable: boolean;
-    reason?: 'NOT_ENOUGH_PLAYERS' | 'TOO_MANY_PLAYERS' | 'NO_CONTENT_LEFT';
-    contentLeft?: number; // pas encore joué dans ce salon
-    contentNew?: number;
-  }[]; // jamais vu par aucun joueur présent
-  results: GameResults | null;
+    reason: 'NOT_ENOUGH_PLAYERS' | 'TOO_MANY_PLAYERS' | null; // étape 4 : + 'NO_CONTENT_LEFT'
+    // étape 4 : contentLeft (pas encore joué dans ce salon), contentNew (vu par personne)
+  }[];
+  // Classement final (statut 'results') : { playerId, nickname, score, rank }
+  results: { gameId: GameId; ranking: RankingEntry[] } | null;
 }
 ```
 
@@ -321,7 +331,7 @@ interface Player {
 Ce qu'un jeu fournit côté serveur :
 
 ```ts
-// server/src/core/engine/define-game.ts
+// server/src/core/engine/types.ts
 export interface GameDefinition<C extends GameContract, S, V extends { phase: PhaseOf<C> }> {
   contract: C;
   setup(ctx: GameContext<C>, init: { players: PlayerId[]; settings: SettingsOf<C> }): S;
@@ -331,8 +341,8 @@ export interface GameDefinition<C extends GameContract, S, V extends { phase: Ph
   onSkip?(state: S, ctx: GameContext<C>): void; // « Passer à la suite » (hôte)
   onPlayerChange?(state: S, ctx: GameContext<C>, change: PlayerChange): void;
   // 'disconnected' | 'reconnected' | 'unawaited' (grâce écoulée) | 'left'
-  canRead?(state: S, viewer: PlayerId, ref: MediaRef): boolean; // accès aux prises et aux contenus
-  uploadLimit?(state: S, from: PlayerId, kind: UploadKindOf<C>): number; // octets max acceptés à cet instant
+  canRead?(state: S, viewer: PlayerId, ref: MediaRef): boolean; // étape 4 : accès aux prises et contenus
+  uploadLimit?(state: S, from: PlayerId, kind: UploadKindOf<C>): number; // étape 4 : octets max acceptés
 }
 
 export interface PhaseDef<C extends GameContract, S> {
@@ -368,9 +378,9 @@ export interface GameContext<C extends GameContract> {
   goto(phase: PhaseOf<C>): void; // transition déclarée → enter() ; annule les minuteries de la phase
   schedule(id: string, delayMs: number): void; // minuterie technique → phases[phase].timer(id)
   reject(code: string): never; // refuse l'action → ack { ok: false, error: code }
-  readonly content: ContentAccess; // jeux non rejouables : pick(), markPlayed(), remaining()
-  readonly media: { discard(id: MediaId): void };
-  end(results: GameResults): void; // fin → classement du socle → retour au salon
+  readonly content: ContentAccess; // étape 4 (jeux non rejouables) : pick(), markPlayed(), remaining()
+  readonly media: { discard(id: MediaId): void }; // étape 4
+  end(scores: readonly ScoreEntry[]): void; // fin → classement calculé par le socle → retour au salon
 }
 ```
 
@@ -520,6 +530,8 @@ export default defineClientGame<typeof dubbing, DubbingView>({
     reveal: RevealScreen,
     roundResults: RoundResultsScreen,
   },
+  // Messages français des erreurs déclarées dans le contrat (TypeScript impose qu'aucune ne manque)
+  errorMessages: { ALREADY_VOTED: 'Tu as déjà voté.' /* … */ },
 });
 
 export interface GameScreenProps<C extends GameContract, V> {
@@ -527,13 +539,23 @@ export interface GameScreenProps<C extends GameContract, V> {
   room: RoomView;
   me: PlayerView;
   isHost: boolean;
-  act<A extends ActionTypeOf<C>>(type: A, payload: PayloadOf<C, A>): Promise<Ack>;
-  upload<K extends UploadKindOf<C>>(kind: K, file: Blob, meta: UploadMetaOf<C, K>): Promise<Ack>;
+  // Refus déjà traduit : { ok: true } | { ok: false, message }
+  act<A extends ActionTypeOf<C>>(type: A, payload: PayloadOf<C, A>): Promise<ActResult>;
+  // Étape 4 :
+  upload<K extends UploadKindOf<C>>(
+    kind: K,
+    file: Blob,
+    meta: UploadMetaOf<C, K>,
+  ): Promise<ActResult>;
   fetchMedia(ref: MediaRef): Promise<Blob>; // vidéo ou prise, avec le jeton
 }
 ```
 
-Registres : `server/src/games/registry.ts` et `client/src/games/registry.ts` contiennent chacun une entrée par jeu. Un test vérifie que les deux registres listent les mêmes jeux.
+Registres : `server/src/games/registry.ts` et `client/src/games/registry.ts` contiennent chacun une entrée par jeu. Plusieurs contrôles protègent leur cohérence :
+
+- au démarrage, le serveur valide chaque définition (`validateRegistry`) : phases déclarées et définies, actions autorisées toutes gérées, transitions vers des phases connues, réglages par défaut dans leurs bornes. Un jeu incohérent empêche le serveur de démarrer ;
+- le test `tests/registries.test.ts` vérifie que les deux registres listent les mêmes jeux, que chaque phase a un écran et chaque erreur un message ;
+- pendant la partie, `ctx.goto` refuse toute transition non déclarée.
 
 ## 6. Flux d'événements
 
@@ -565,7 +587,7 @@ Serveur : vérifie hôte, statut lobby, min ≤ joueurs ≤ max, contenu restant
   → GameRunner(définition, participants = joueurs présents) → setup → enter(initialPhase)
   → room:state {status: 'playing'} + game:view à chacun
   … partie …
-Jeu : ctx.end(results) → room:state {status: 'results', results} → RankingScreen
+Jeu : ctx.end(scores) → le socle classe → room:state {status: 'results', results} → RankingScreen
 Hôte : results:dismiss → retour au salon ; les joueurs « waiting » deviennent joueurs
 À tout moment : game:skip (« Passer à la suite »), game:abort (retour au salon sans résultat)
 ```

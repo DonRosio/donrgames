@@ -1,0 +1,43 @@
+.board {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-small);
+  background: var(--surface-raised);
+}
+
+.me {
+  outline: 2px solid var(--accent);
+}
+
+.rank {
+  width: 1.8em;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-align: right;
+}
+
+.name {
+  flex: 1;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.delta {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}

@@ -1,0 +1,15 @@
+.view {
+  display: grid;
+  gap: var(--gap);
+}
+
+.hostBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-small);
+}

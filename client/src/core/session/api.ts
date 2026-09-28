@@ -1,7 +1,7 @@
 import { isErrorCode } from '@mini-jeux/shared';
 import type {
   CreateRoomRequest,
-  GameMeta,
+  GameInfo,
   JoinRoomRequest,
   SessionResponse,
 } from '@mini-jeux/shared';
@@ -28,7 +28,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  games: () => request<GameMeta[]>('/api/games'),
+  games: () => request<GameInfo[]>('/api/games'),
   createRoom: (body: CreateRoomRequest) =>
     request<SessionResponse>('/api/rooms', { method: 'POST', body: JSON.stringify(body) }),
   joinRoom: (body: JoinRoomRequest) =>

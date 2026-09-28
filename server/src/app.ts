@@ -2,7 +2,11 @@ import Fastify, { LogController } from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import type { Server } from 'socket.io';
 import type { Config } from './config.ts';
-import type { RegisteredGame } from './core/engine/types.ts';
+import type { GameContract, GameInfo } from '@mini-jeux/shared';
+import type { AnyGameDefinition } from './core/engine/types.ts';
+import type { GameRandom } from './core/engine/random.ts';
+import type { Scheduler } from './core/engine/scheduler.ts';
+import { validateRegistry } from './core/engine/validate.ts';
 import { registerClient } from './core/http/client.ts';
 import { registerErrorHandler } from './core/http/errors.ts';
 import { registerRoomRoutes } from './core/http/rooms.routes.ts';
@@ -20,7 +24,10 @@ export interface AppOptions {
   config: Config;
   clock?: Clock;
   random?: RandomSource;
-  games?: readonly RegisteredGame[];
+  games?: readonly AnyGameDefinition[];
+  /** Game timers and randomness (replaced by manual / seeded versions in tests). */
+  scheduler?: Scheduler;
+  gameRandom?: GameRandom;
   /** Maintenance period (room expiry, limiters). 0 disables the timer (tests call sweep()). */
   sweepIntervalMs?: number;
   /** Serve the built client. Defaults to production only (Vite serves it in development). */
@@ -38,6 +45,7 @@ export async function buildApp(options: AppOptions): Promise<App> {
   const { config } = options;
   const clock = options.clock ?? systemClock;
   const games = options.games ?? registeredGames;
+  validateRegistry(games);
 
   const app = Fastify({
     logger: { level: config.logLevel },
@@ -66,11 +74,18 @@ export async function buildApp(options: AppOptions): Promise<App> {
     clock,
     random: options.random ?? cryptoRandom,
     limits: config.limits,
+    games,
+    ...(options.scheduler ? { scheduler: options.scheduler } : {}),
+    ...(options.gameRandom ? { gameRandom: options.gameRandom } : {}),
   });
   const ipKey = createIpKeyer();
 
   app.get('/api/health', async () => ({ ok: true }));
-  app.get('/api/games', async () => games.map((game) => game.meta));
+  const catalog: GameInfo[] = games.map((game) => {
+    const { meta, settings } = game.contract as GameContract;
+    return { meta, settings };
+  });
+  app.get('/api/games', async () => catalog);
   const roomRoutes = registerRoomRoutes(app, { rooms, clock, ipKey });
 
   const serveClient = options.serveClient ?? config.env === 'production';

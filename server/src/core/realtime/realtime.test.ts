@@ -45,7 +45,7 @@ describe('realtime', () => {
     const first = await next(host, 'room:state');
     expect(first).toMatchObject({ code: created.code, status: 'lobby', maxPlayers: 10 });
     expect(first.players).toEqual([
-      { id: first.me, nickname: 'Léa', connected: true, isHost: true },
+      { id: first.me, nickname: 'Léa', connected: true, isHost: true, role: 'player' },
     ]);
 
     const tom = await server.joinRoom(created.code, 'Tom');

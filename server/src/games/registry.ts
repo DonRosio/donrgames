@@ -1,4 +1,4 @@
-import type { RegisteredGame } from '../core/engine/types.ts';
+import type { AnyGameDefinition } from '../core/engine/types.ts';
 
-/** Server game registry: one entry per game. */
-export const games: readonly RegisteredGame[] = [];
+/** Server game registry: one entry per game (and its import). */
+export const games: readonly AnyGameDefinition[] = [];

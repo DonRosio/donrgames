@@ -1,0 +1,20 @@
+.page {
+  display: grid;
+  gap: var(--gap);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.title {
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: center;
+  gap: 24px;
+}

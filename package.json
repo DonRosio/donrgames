@@ -14,7 +14,7 @@
     "dev": "node scripts/dev.ts",
     "dev:lan": "node scripts/dev.ts --lan",
     "certs": "node scripts/certs.ts",
-    "typecheck": "tsc -p shared && tsc -p server && tsc -p client && tsc -p scripts",
+    "typecheck": "tsc -p shared && tsc -p server && tsc -p client && tsc -p scripts && tsc -p tests",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

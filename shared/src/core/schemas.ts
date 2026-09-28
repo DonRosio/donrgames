@@ -34,3 +34,15 @@ export const socketAuthSchema = z.strictObject({ token: sessionTokenSchema });
 export const emptyPayloadSchema = z.strictObject({});
 export const clockPingSchema = z.strictObject({ t0: z.number() });
 export const playerTargetSchema = z.strictObject({ playerId: playerIdSchema });
+
+export const selectGameSchema = z.strictObject({ gameId: gameIdSchema });
+export const setSettingsSchema = z.strictObject({
+  settings: z
+    .record(z.string().max(32), z.union([z.number(), z.string().max(64), z.boolean()]))
+    .refine((settings) => Object.keys(settings).length <= 20),
+});
+/** Envelope only: the payload is validated against the action schema of the running game. */
+export const gameActionSchema = z.strictObject({
+  type: z.string().regex(/^[A-Za-z][A-Za-z0-9]{0,31}$/),
+  payload: z.unknown(),
+});

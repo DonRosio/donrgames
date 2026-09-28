@@ -14,6 +14,10 @@ describe('matchRoute', () => {
     expect(matchRoute('/room/ABC123')).toEqual({ name: 'room', code: 'ABC123' });
   });
 
+  it('matches the dev gallery', () => {
+    expect(matchRoute('/dev/ui')).toEqual({ name: 'devGallery' });
+  });
+
   it('sends invalid or unknown paths home', () => {
     expect(matchRoute('/room/ABC')).toEqual({ name: 'home', joinCode: null });
     expect(matchRoute('/join/ABC123/extra')).toEqual({ name: 'home', joinCode: null });

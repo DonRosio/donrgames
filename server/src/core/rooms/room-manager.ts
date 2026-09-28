@@ -5,7 +5,25 @@ import {
   normalizeNickname,
   validateNickname,
 } from '@mini-jeux/shared';
-import type { ContentHistory, RoomView } from '@mini-jeux/shared';
+import type {
+  ContentHistory,
+  GameAvailability,
+  GameContract,
+  GameViewEnvelope,
+  RankingEntry,
+  RoomStatus,
+  RoomView,
+  ScoreEntry,
+  SettingValue,
+} from '@mini-jeux/shared';
+import { rank } from '../engine/helpers.ts';
+import { cryptoGameRandom } from '../engine/random.ts';
+import type { GameRandom } from '../engine/random.ts';
+import { GameRunner } from '../engine/runner.ts';
+import { systemScheduler } from '../engine/scheduler.ts';
+import type { Scheduler } from '../engine/scheduler.ts';
+import { defaultSettings, patchSettings } from '../engine/settings.ts';
+import type { AnyGameDefinition, Roster, RosterEntry } from '../engine/types.ts';
 import { DomainError } from '../lib/errors.ts';
 import { hashToken } from '../lib/random.ts';
 import type { RandomSource } from '../lib/random.ts';
@@ -48,6 +66,10 @@ export interface Player {
   /** Current Socket.IO connection, null when disconnected. */
   socketId: string | null;
   disconnectedAt: number | null;
+  /** 'waiting': arrived during a game (or disconnected when it started), plays the next one. */
+  role: 'player' | 'waiting';
+  /** The running game was told it should no longer wait for this player. */
+  unawaited: boolean;
   /** "Already seen" content ids declared by the device, per game. */
   history: Map<string, Set<string>>;
 }
@@ -57,9 +79,13 @@ export interface Room {
   id: string;
   code: string;
   hostId: string;
-  status: 'lobby';
+  status: RoomStatus;
   /** Insertion order is arrival order. */
   players: Map<string, Player>;
+  selectedGame: string | null;
+  settings: Record<string, SettingValue>;
+  runner: GameRunner | null;
+  results: { gameId: string; ranking: RankingEntry[] } | null;
   createdAt: number;
   lastActionAt: number;
   /** Since when no player is connected, null while someone is. */
@@ -72,14 +98,20 @@ export type RoomCloseReason = 'closed' | 'expired' | 'empty';
 /** Notifications consumed by the realtime layer to push new states to clients. */
 export interface RoomEvents {
   roomChanged(room: Room): void;
+  /** The game views may have changed: push them to the participants. */
+  gameUpdated(room: Room): void;
   playerRemoved(room: Room, player: Player, reason: PlayerRemovalReason): void;
   roomClosed(room: Room, reason: RoomCloseReason): void;
+  /** A game handler failed outside of an action (timer…): to be logged. */
+  gameFailed(room: Room, error: unknown): void;
 }
 
 const noEvents: RoomEvents = {
   roomChanged: () => {},
+  gameUpdated: () => {},
   playerRemoved: () => {},
   roomClosed: () => {},
+  gameFailed: () => {},
 };
 
 export interface Session {
@@ -97,18 +129,33 @@ interface SessionRef {
   playerId: string;
 }
 
+export interface RoomManagerOptions {
+  clock: Clock;
+  random: RandomSource;
+  limits: RoomLimits;
+  games?: readonly AnyGameDefinition[];
+  scheduler?: Scheduler;
+  gameRandom?: GameRandom;
+}
+
 export class RoomManager {
   readonly #clock: Clock;
   readonly #random: RandomSource;
   readonly #limits: RoomLimits;
+  readonly #games: ReadonlyMap<string, AnyGameDefinition>;
+  readonly #scheduler: Scheduler;
+  readonly #gameRandom: GameRandom;
   #events: RoomEvents = noEvents;
   readonly #rooms = new Map<string, Room>();
   readonly #sessions = new Map<string, SessionRef>();
 
-  constructor(options: { clock: Clock; random: RandomSource; limits: RoomLimits }) {
+  constructor(options: RoomManagerOptions) {
     this.#clock = options.clock;
     this.#random = options.random;
     this.#limits = options.limits;
+    this.#games = new Map((options.games ?? []).map((game) => [contractOf(game).meta.id, game]));
+    this.#scheduler = options.scheduler ?? systemScheduler;
+    this.#gameRandom = options.gameRandom ?? cryptoGameRandom;
   }
 
   setEvents(events: RoomEvents): void {
@@ -123,16 +170,23 @@ export class RoomManager {
     return this.#rooms.get(code);
   }
 
+  // ---------------------------------------------------------------- rooms and players
+
   createRoom(input: { nickname: string; history: ContentHistory }): NewSession {
     if (this.#rooms.size >= this.#limits.maxRooms) throw new DomainError('TOO_MANY_ROOMS');
     const nickname = checkNickname(input.nickname);
     const now = this.#clock.now();
+    const firstGame = this.#games.values().next().value;
     const room: Room = {
       id: this.#random.id(6),
       code: this.#uniqueCode(),
       hostId: '',
       status: 'lobby',
       players: new Map(),
+      selectedGame: firstGame ? contractOf(firstGame).meta.id : null,
+      settings: firstGame ? defaultSettings(contractOf(firstGame).settings) : {},
+      runner: null,
+      results: null,
       createdAt: now,
       lastActionAt: now,
       noConnectedSince: now,
@@ -174,10 +228,17 @@ export class RoomManager {
   attachSocket(session: Session, socketId: string): string | null {
     const { room, player } = session;
     const previous = player.socketId;
+    const wasDisconnected = previous === null;
     player.socketId = socketId;
     player.disconnectedAt = null;
+    player.unawaited = false;
     room.noConnectedSince = null;
     this.#events.roomChanged(room);
+    if (room.runner?.isParticipant(player.id)) {
+      if (wasDisconnected) room.runner.playerChanged({ playerId: player.id, kind: 'reconnected' });
+      // Also delivers the current view to the new connection.
+      this.#events.gameUpdated(room);
+    }
     return previous !== null && previous !== socketId ? previous : null;
   }
 
@@ -190,6 +251,9 @@ export class RoomManager {
     player.disconnectedAt = now;
     if (!hasConnectedPlayer(room)) room.noConnectedSince = now;
     this.#events.roomChanged(room);
+    if (room.runner?.isParticipant(player.id)) {
+      room.runner.playerChanged({ playerId: player.id, kind: 'disconnected' });
+    }
   }
 
   leave(session: Session): void {
@@ -221,7 +285,133 @@ export class RoomManager {
     this.#closeRoom(session.room, 'closed');
   }
 
-  /** Periodic maintenance: host hand-over, removal of long-gone players, room expiry. */
+  // ---------------------------------------------------------------- games
+
+  selectGame(session: Session, gameId: string): void {
+    const { room } = this.#hostInLobby(session);
+    const game = this.#games.get(gameId);
+    if (!game) throw new DomainError('GAME_NOT_FOUND');
+    room.selectedGame = gameId;
+    room.settings = defaultSettings(contractOf(game).settings);
+    this.#touch(room);
+    this.#events.roomChanged(room);
+  }
+
+  setSettings(session: Session, patch: Record<string, unknown>): void {
+    const { room } = this.#hostInLobby(session);
+    const game = room.selectedGame ? this.#games.get(room.selectedGame) : undefined;
+    if (!game) throw new DomainError('GAME_NOT_FOUND');
+    const settings = patchSettings(contractOf(game).settings, room.settings, patch);
+    if (!settings) throw new DomainError('INVALID_SETTINGS');
+    room.settings = settings;
+    this.#touch(room);
+    this.#events.roomChanged(room);
+  }
+
+  startGame(session: Session): void {
+    const { room } = this.#hostInLobby(session);
+    const game = room.selectedGame ? this.#games.get(room.selectedGame) : undefined;
+    if (!game) throw new DomainError('GAME_NOT_FOUND');
+    if (!this.#availability(room, game).launchable) throw new DomainError('GAME_UNAVAILABLE');
+
+    // Participants are the connected players; the others will play the next game.
+    const participants: string[] = [];
+    const nicknames = new Map<string, string>();
+    for (const player of room.players.values()) {
+      player.unawaited = false;
+      if (player.socketId === null) {
+        player.role = 'waiting';
+      } else {
+        participants.push(player.id);
+        nicknames.set(player.id, player.nickname);
+      }
+    }
+
+    const runner: GameRunner = new GameRunner({
+      definition: game,
+      runId: this.#random.id(6),
+      participants,
+      settings: room.settings,
+      roster: this.#roster(room, participants, nicknames),
+      clock: this.#clock,
+      random: this.#gameRandom,
+      scheduler: this.#scheduler,
+      hooks: {
+        onUpdate: () => {
+          if (room.runner === runner) this.#events.gameUpdated(room);
+        },
+        onEnd: (scores) => this.#finishGame(room, runner, scores, nicknames),
+        onError: (error) => this.#events.gameFailed(room, error),
+      },
+    });
+    room.runner = runner;
+    room.status = 'playing';
+    room.results = null;
+    try {
+      runner.start();
+    } catch (error) {
+      this.#backToLobby(room);
+      throw error;
+    }
+    this.#touch(room);
+    this.#events.roomChanged(room);
+    if (room.runner === runner) this.#events.gameUpdated(room);
+  }
+
+  gameAction(session: Session, type: string, payload: unknown): void {
+    const { room, player } = session;
+    const runner = room.runner;
+    if (room.status !== 'playing' || !runner) throw new DomainError('WRONG_PHASE');
+    runner.dispatch(player.id, type, payload, room.hostId === player.id);
+    this.#touch(room);
+    if (room.runner === runner) this.#events.gameUpdated(room);
+  }
+
+  /** Host's "Passer à la suite". */
+  skipPhase(session: Session): void {
+    const { room, player } = session;
+    assertHost(room, player);
+    const runner = room.runner;
+    if (room.status !== 'playing' || !runner) throw new DomainError('WRONG_PHASE');
+    runner.skip();
+    this.#touch(room);
+    if (room.runner === runner) this.#events.gameUpdated(room);
+  }
+
+  /** Stops the game without results. */
+  abortGame(session: Session): void {
+    const { room, player } = session;
+    assertHost(room, player);
+    if (room.status !== 'playing') throw new DomainError('WRONG_PHASE');
+    this.#backToLobby(room);
+    this.#touch(room);
+    this.#events.roomChanged(room);
+  }
+
+  dismissResults(session: Session): void {
+    const { room, player } = session;
+    assertHost(room, player);
+    if (room.status !== 'results') throw new DomainError('WRONG_PHASE');
+    this.#backToLobby(room);
+    this.#touch(room);
+    this.#events.roomChanged(room);
+  }
+
+  /** Current game view of a participant, or null (no game, or not a participant). */
+  gameView(room: Room, playerId: string): GameViewEnvelope | null {
+    const runner = room.runner;
+    if (!runner || room.status !== 'playing' || !runner.isParticipant(playerId)) return null;
+    return {
+      gameId: contractOf(runner.definition).meta.id,
+      runId: runner.runId,
+      seq: runner.seq,
+      view: runner.view(playerId),
+    };
+  }
+
+  // ---------------------------------------------------------------- maintenance and views
+
+  /** Periodic maintenance: host hand-over, grace delays, removal of long-gone players, expiry. */
   sweep(): void {
     const now = this.#clock.now();
     const timings = this.#limits.timings;
@@ -236,11 +426,17 @@ export class RoomManager {
       }
 
       for (const player of [...room.players.values()]) {
-        if (
-          player.disconnectedAt !== null &&
-          now - player.disconnectedAt >= timings.lobbyDisconnectRemoveMs
-        ) {
+        if (player.disconnectedAt === null) continue;
+        const away = now - player.disconnectedAt;
+        // Participants of a running game stay in the room until it is over.
+        const removable = room.status === 'lobby' || player.role === 'waiting';
+        if (removable && away >= timings.lobbyDisconnectRemoveMs) {
           this.#removePlayer(room, player, 'timeout');
+        } else if (room.runner?.isParticipant(player.id) && !player.unawaited) {
+          if (away >= timings.disconnectGraceMs) {
+            player.unawaited = true;
+            room.runner.playerChanged({ playerId: player.id, kind: 'unawaited' });
+          }
         }
       }
       if (!this.#rooms.has(room.code)) continue;
@@ -272,8 +468,90 @@ export class RoomManager {
         nickname: player.nickname,
         connected: player.socketId !== null,
         isHost: player.id === room.hostId,
+        role: player.role,
+      })),
+      games: [...this.#games.values()].map((game) => this.#availability(room, game)),
+      selectedGame: room.selectedGame ? { id: room.selectedGame, settings: room.settings } : null,
+      results: room.results,
+    };
+  }
+
+  // ---------------------------------------------------------------- internals
+
+  #availability(room: Room, game: AnyGameDefinition): GameAvailability {
+    const { id, minPlayers, maxPlayers } = contractOf(game).meta;
+    let connected = 0;
+    for (const player of room.players.values()) if (player.socketId !== null) connected++;
+    const reason =
+      connected < minPlayers
+        ? 'NOT_ENOUGH_PLAYERS'
+        : connected > maxPlayers
+          ? 'TOO_MANY_PLAYERS'
+          : null;
+    return { id, launchable: reason === null, reason };
+  }
+
+  #roster(room: Room, participants: readonly string[], nicknames: Map<string, string>): Roster {
+    const entry = (id: string): RosterEntry | undefined => {
+      if (!participants.includes(id)) return undefined;
+      const player = room.players.get(id);
+      const connected = player !== undefined && player.socketId !== null;
+      const withinGrace =
+        player !== undefined &&
+        player.disconnectedAt !== null &&
+        this.#clock.now() - player.disconnectedAt < this.#limits.timings.disconnectGraceMs;
+      return {
+        id,
+        nickname: player?.nickname ?? nicknames.get(id) ?? '',
+        present: player !== undefined,
+        connected,
+        awaited: connected || withinGrace,
+      };
+    };
+    return {
+      all: () => participants.map((id) => entry(id)!),
+      get: entry,
+      awaited: () => participants.filter((id) => entry(id)!.awaited),
+      connected: () => participants.filter((id) => entry(id)!.connected),
+    };
+  }
+
+  #finishGame(
+    room: Room,
+    runner: GameRunner,
+    scores: readonly ScoreEntry[],
+    nicknames: Map<string, string>,
+  ): void {
+    if (room.runner !== runner) return;
+    room.runner = null;
+    room.status = 'results';
+    room.results = {
+      gameId: contractOf(runner.definition).meta.id,
+      ranking: rank(scores).map((entry) => ({
+        playerId: entry.playerId,
+        nickname: nicknames.get(entry.playerId) ?? '?',
+        score: entry.score,
+        rank: entry.rank,
       })),
     };
+    this.#events.roomChanged(room);
+  }
+
+  #backToLobby(room: Room): void {
+    room.runner?.dispose();
+    room.runner = null;
+    room.status = 'lobby';
+    room.results = null;
+    for (const player of room.players.values()) {
+      player.role = 'player';
+      player.unawaited = false;
+    }
+  }
+
+  #hostInLobby(session: Session): Session {
+    assertHost(session.room, session.player);
+    if (session.room.status !== 'lobby') throw new DomainError('WRONG_PHASE');
+    return session;
   }
 
   #addPlayer(
@@ -290,6 +568,8 @@ export class RoomManager {
       socketId: null,
       // Not connected until its socket arrives: a player who never connects gets removed.
       disconnectedAt: this.#clock.now(),
+      role: room.status === 'lobby' ? 'player' : 'waiting',
+      unawaited: false,
       history: new Map(Object.entries(history).map(([game, ids]) => [game, new Set(ids)])),
     };
     room.players.set(player.id, player);
@@ -311,9 +591,14 @@ export class RoomManager {
     if (!hasConnectedPlayer(room)) room.noConnectedSince ??= this.#clock.now();
     this.#touch(room);
     this.#events.roomChanged(room);
+    if (room.runner?.isParticipant(player.id)) {
+      room.runner.playerChanged({ playerId: player.id, kind: 'left' });
+    }
   }
 
   #closeRoom(room: Room, reason: RoomCloseReason): void {
+    room.runner?.dispose();
+    room.runner = null;
     this.#rooms.delete(room.code);
     for (const player of room.players.values()) this.#sessions.delete(player.tokenHash);
     this.#events.roomClosed(room, reason);
@@ -331,6 +616,10 @@ export class RoomManager {
   #touch(room: Room): void {
     room.lastActionAt = this.#clock.now();
   }
+}
+
+function contractOf(game: AnyGameDefinition): GameContract {
+  return game.contract as GameContract;
 }
 
 function checkNickname(raw: string): string {

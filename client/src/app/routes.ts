@@ -1,9 +1,14 @@
 import { isRoomCode, normalizeRoomCode } from '@mini-jeux/shared';
 
-export type Route = { name: 'home'; joinCode: string | null } | { name: 'room'; code: string };
+export type Route =
+  | { name: 'home'; joinCode: string | null }
+  | { name: 'room'; code: string }
+  /** Components gallery, available in development only. */
+  | { name: 'devGallery' };
 
-/** Three routes only: /, /join/:code and /room/:code. Anything else leads home. */
+/** Three routes (/, /join/:code, /room/:code) plus the dev gallery. Anything else leads home. */
 export function matchRoute(pathname: string): Route {
+  if (pathname === '/dev/ui') return { name: 'devGallery' };
   const [, section, rawCode, ...rest] = pathname.split('/');
   if (rawCode !== undefined && rest.length === 0) {
     const code = normalizeRoomCode(decodeURIComponent(rawCode));

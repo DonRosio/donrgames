@@ -21,6 +21,7 @@ export function PlayerList({ players, me, onMakeHost, onKick }: PlayerListProps)
           <span className={styles.name}>{player.nickname}</span>
           {player.id === me && <span className={styles.badge}>toi</span>}
           {player.isHost && <span className={styles.hostBadge}>hôte</span>}
+          {player.role === 'waiting' && <span className={styles.badge}>prochaine partie</span>}
           {!player.connected && <span className="muted">déconnecté</span>}
           {player.id !== me && (onMakeHost || onKick) && (
             <span className={styles.actions}>

@@ -1,0 +1,46 @@
+.form {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.field dt label {
+  margin: 0;
+  font-weight: 600;
+}
+
+.field dd {
+  margin: 0;
+}
+
+.number {
+  width: 6.5em;
+  text-align: center;
+}
+
+.select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.checkbox {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+.readOnly {
+  font-weight: 700;
+}

@@ -13,9 +13,13 @@ import type {
 import {
   clockPingSchema,
   emptyPayloadSchema,
+  gameActionSchema,
   playerTargetSchema,
+  selectGameSchema,
+  setSettingsSchema,
   socketAuthSchema,
 } from '@mini-jeux/shared/schemas';
+import { GameRuleError } from '../engine/types.ts';
 import { clientIpOf } from '../lib/client-ip.ts';
 import { DomainError } from '../lib/errors.ts';
 import { isAllowedOrigin } from '../lib/origin.ts';
@@ -82,6 +86,8 @@ export function createRealtime(deps: RealtimeDeps): IoServer {
   });
 
   const connectionsPerIp = new Map<string, number>();
+  // Last game view sent to each socket (JSON, prefixed by the run id): only changes are sent.
+  const lastGameView = new Map<string, string>();
 
   const endSocket = (socketId: string, reason: SessionEndReason) => {
     const socket = io.sockets.sockets.get(socketId);
@@ -98,6 +104,20 @@ export function createRealtime(deps: RealtimeDeps): IoServer {
       for (const player of room.players.values()) {
         if (player.socketId) io.to(player.socketId).emit('room:state', rooms.view(room, player.id));
       }
+    },
+    gameUpdated(room) {
+      for (const player of room.players.values()) {
+        if (!player.socketId) continue;
+        const envelope = rooms.gameView(room, player.id);
+        if (!envelope) continue;
+        const key = `${envelope.runId}:${JSON.stringify(envelope.view)}`;
+        if (lastGameView.get(player.socketId) === key) continue;
+        lastGameView.set(player.socketId, key);
+        io.to(player.socketId).emit('game:view', envelope);
+      }
+    },
+    gameFailed(room, error) {
+      logger.error({ room: room.id, err: error }, 'game handler failed');
     },
     playerRemoved(_room, player, reason) {
       if (!player.socketId) return;
@@ -162,7 +182,9 @@ export function createRealtime(deps: RealtimeDeps): IoServer {
         try {
           reply({ ok: true, data: run(current, parsed.data) ?? null });
         } catch (error) {
-          if (error instanceof DomainError) return reply({ ok: false, error: error.code });
+          if (error instanceof DomainError || error instanceof GameRuleError) {
+            return reply({ ok: false, error: error.code });
+          }
           logger.error({ err: error, event }, 'socket handler failed');
           reply({ ok: false, error: 'INTERNAL' });
         }
@@ -175,6 +197,17 @@ export function createRealtime(deps: RealtimeDeps): IoServer {
       rooms.transferHost(s, playerId),
     );
     handle('room:close', emptyPayloadSchema, (s) => rooms.close(s));
+    handle('room:selectGame', selectGameSchema, (s, { gameId }) => rooms.selectGame(s, gameId));
+    handle('room:setSettings', setSettingsSchema, (s, { settings }) =>
+      rooms.setSettings(s, settings),
+    );
+    handle('room:startGame', emptyPayloadSchema, (s) => rooms.startGame(s));
+    handle('game:action', gameActionSchema, (s, { type, payload }) =>
+      rooms.gameAction(s, type, payload),
+    );
+    handle('game:skip', emptyPayloadSchema, (s) => rooms.skipPhase(s));
+    handle('game:abort', emptyPayloadSchema, (s) => rooms.abortGame(s));
+    handle('results:dismiss', emptyPayloadSchema, (s) => rooms.dismissResults(s));
     handle('room:leave', emptyPayloadSchema, (s) => {
       rooms.leave(s);
       // Runs after the acknowledgement is queued: the client receives it before the disconnect.
@@ -182,6 +215,7 @@ export function createRealtime(deps: RealtimeDeps): IoServer {
     });
 
     socket.on('disconnect', () => {
+      lastGameView.delete(socket.id);
       const count = (connectionsPerIp.get(ipKey) ?? 1) - 1;
       if (count > 0) connectionsPerIp.set(ipKey, count);
       else connectionsPerIp.delete(ipKey);

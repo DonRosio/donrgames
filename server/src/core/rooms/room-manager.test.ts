@@ -40,6 +40,10 @@ function setup(options: { maxRooms?: number; maxPlayersPerRoom?: number; codes?:
   };
   rooms.setEvents({
     roomChanged: (room) => log.changed.push(room),
+    gameUpdated: () => {},
+    gameFailed: (_room, error) => {
+      throw error;
+    },
     playerRemoved: (_room, player, reason) => log.removed.push({ player, reason }),
     roomClosed: (room, reason) => log.closed.push({ room, reason }),
   });

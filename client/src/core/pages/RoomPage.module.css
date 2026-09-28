@@ -61,3 +61,8 @@
   justify-content: space-between;
   gap: 12px;
 }
+
+.waiting {
+  text-align: center;
+  font-size: 1.1rem;
+}

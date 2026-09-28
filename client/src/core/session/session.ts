@@ -1,12 +1,14 @@
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
-import { SOCKET_PATH } from '@mini-jeux/shared';
+import { SOCKET_PATH, isErrorCode } from '@mini-jeux/shared';
 import type {
   Ack,
   ClientToServerEvents,
   ClockPong,
+  GameViewEnvelope,
   RoomView,
   ServerToClientEvents,
+  SettingValue,
 } from '@mini-jeux/shared';
 import { ClockSync } from './clock.ts';
 import type { ClockEstimate } from './clock.ts';
@@ -19,14 +21,19 @@ export interface SessionSnapshot {
   status: ConnectionStatus;
   /** Last room state received; kept while reconnecting. */
   room: RoomView | null;
+  /** View of the running game for this player (null outside of a game or when waiting). */
+  game: GameViewEnvelope | null;
   endReason: EndReason | null;
   clock: ClockEstimate | null;
 }
 
+/** Result of a game action: refusals carry a core or game error code. */
+export type ActionAck = { ok: true } | { ok: false; code: string };
+
 const REQUEST_TIMEOUT_MS = 5000;
 const RETRY_DELAY_MS = 3000;
 
-type RoomEvent = 'room:leave' | 'room:kick' | 'room:transferHost' | 'room:close';
+type RequestEvent = Exclude<keyof ClientToServerEvents, 'clock:ping'>;
 
 /**
  * Realtime connection to a room, exposed as an external store for React
@@ -36,7 +43,13 @@ export class Session {
   readonly #socket: Socket<ServerToClientEvents, ClientToServerEvents>;
   readonly #clock: ClockSync;
   readonly #listeners = new Set<() => void>();
-  #snapshot: SessionSnapshot = { status: 'connecting', room: null, endReason: null, clock: null };
+  #snapshot: SessionSnapshot = {
+    status: 'connecting',
+    room: null,
+    game: null,
+    endReason: null,
+    clock: null,
+  };
   #retry: ReturnType<typeof setTimeout> | null = null;
 
   constructor(token: string) {
@@ -73,7 +86,15 @@ export class Session {
       // Errors raised by the server middleware are not retried automatically.
       if (!this.#socket.active) this.#scheduleRetry();
     });
-    this.#socket.on('room:state', (room) => this.#update({ room }));
+    this.#socket.on('room:state', (room) => {
+      // Game views only make sense while a game is running.
+      this.#update(room.status === 'playing' ? { room } : { room, game: null });
+    });
+    this.#socket.on('game:view', (envelope) => {
+      const current = this.#snapshot.game;
+      if (current && current.runId === envelope.runId && current.seq >= envelope.seq) return;
+      this.#update({ game: envelope });
+    });
     this.#socket.on('session:ended', ({ reason }) => this.#end(reason));
   }
 
@@ -117,20 +138,54 @@ export class Session {
     return this.#request('room:close', {});
   }
 
-  #request(event: RoomEvent, payload: object): Promise<void> {
+  selectGame(gameId: string): Promise<void> {
+    return this.#request('room:selectGame', { gameId });
+  }
+
+  setSettings(settings: Record<string, SettingValue>): Promise<void> {
+    return this.#request('room:setSettings', { settings });
+  }
+
+  startGame(): Promise<void> {
+    return this.#request('room:startGame', {});
+  }
+
+  skipPhase(): Promise<void> {
+    return this.#request('game:skip', {});
+  }
+
+  abortGame(): Promise<void> {
+    return this.#request('game:abort', {});
+  }
+
+  dismissResults(): Promise<void> {
+    return this.#request('results:dismiss', {});
+  }
+
+  /** Sends a game action; refusals are returned, not thrown. */
+  async act(type: string, payload: unknown): Promise<ActionAck> {
+    const result = await this.#emit('game:action', { type, payload });
+    return result.ok ? { ok: true } : { ok: false, code: result.error };
+  }
+
+  async #request(event: RequestEvent, payload: object): Promise<void> {
+    const result = await this.#emit(event, payload);
+    if (!result.ok) throw new ApiError(isErrorCode(result.error) ? result.error : 'INTERNAL');
+  }
+
+  #emit(event: RequestEvent, payload: object): Promise<Ack<unknown>> {
     return new Promise((resolve, reject) => {
-      // Loosely typed on purpose: every room event shares the (payload, ack) shape.
+      // Loosely typed on purpose: every request event shares the (payload, ack) shape.
       const socket = this.#socket.timeout(REQUEST_TIMEOUT_MS) as unknown as {
         emit(
-          event: RoomEvent,
+          event: RequestEvent,
           payload: object,
-          ack: (error: Error | null, result: Ack) => void,
+          ack: (error: Error | null, result: Ack<unknown>) => void,
         ): void;
       };
       socket.emit(event, payload, (error, result) => {
         if (error) reject(new ApiError('TIMEOUT'));
-        else if (result.ok) resolve();
-        else reject(new ApiError(result.error));
+        else resolve(result);
       });
     });
   }

@@ -7,7 +7,7 @@ import {
   normalizeRoomCode,
   validateNickname,
 } from '@mini-jeux/shared';
-import type { GameMeta } from '@mini-jeux/shared';
+import type { GameInfo } from '@mini-jeux/shared';
 import { navigate, takeFlash } from '../../app/router.ts';
 import { api } from '../session/api.ts';
 import { codeMessage, errorMessage } from '../session/errors.ts';
@@ -17,7 +17,7 @@ import styles from './HomePage.module.css';
 
 export function HomePage({ joinCode }: { joinCode: string | null }) {
   const [flash] = useState(takeFlash);
-  const [games, setGames] = useState<GameMeta[] | null>(null);
+  const [games, setGames] = useState<GameInfo[] | null>(null);
   const [nickname, setNickname] = useState(nicknameStore.load);
   const [code, setCode] = useState(joinCode ?? '');
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
@@ -158,7 +158,7 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
         {games?.length === 0 && <p className="muted">Aucun jeu disponible pour l'instant.</p>}
         {games && games.length > 0 && (
           <ul className={styles.gameList}>
-            {games.map((game) => (
+            {games.map(({ meta: game }) => (
               <li key={game.id} className="card">
                 <h3>
                   {game.name}
