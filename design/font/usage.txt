@@ -1,2 +1,3 @@
-Heyam -> Utilise cette police pour la phrase "Manche suivante !" prononcée par le présentateur lors de la transition avec les nuages.
-Simply Olive DEMO -> Utilise cette police pour le texte du site en général.
+Heyam -> Utilise cette police pour la phrase "Manche suivante !" prononcée par le présentateur lors de la transition avec les nuages. Il faut qu'elle soit affichée en vraiment gros.
+Shizuoka Cyberpunk -> Titre "Mini-jeux entre amis" et titre des jeux
+Utilise la police par défaut pour le reste.

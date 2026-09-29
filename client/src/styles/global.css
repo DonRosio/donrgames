@@ -10,49 +10,11 @@
 html,
 body {
   margin: 0;
-  background:
-    radial-gradient(60rem 36rem at 12% -8%, rgb(48 214 200 / 16%), transparent 65%),
-    radial-gradient(44rem 30rem at 92% -4%, rgb(150 80 210 / 14%), transparent 65%),
-    radial-gradient(52rem 30rem at 100% 104%, rgb(255 122 40 / 14%), transparent 65%), var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  /* The display font is narrow with a small x-height: slightly larger than the usual 16px. */
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.5;
-  letter-spacing: 0.01em;
-}
-
-/* Fireflies: a few faint dots that twinkle behind the content. */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle, #bffff6 0 1px, transparent 2.5px) 8% 22% / 240px 240px,
-    radial-gradient(circle, #ffd9b0 0 1px, transparent 2.5px) 63% 71% / 320px 300px,
-    radial-gradient(circle, #d9b8ff 0 1px, transparent 2.5px) 37% 44% / 400px 380px;
-  opacity: 0.7;
-  animation: twinkle 5s ease-in-out infinite alternate;
-}
-
-@keyframes twinkle {
-  from {
-    opacity: 0.25;
-  }
-
-  to {
-    opacity: 0.8;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::before {
-    animation: none;
-    opacity: 0.4;
-  }
 }
 
 #root {
@@ -67,12 +29,17 @@ h2,
 h3 {
   line-height: 1.2;
   margin: 0;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 
 h1 {
-  color: var(--glow);
-  text-shadow: 0 0 22px rgb(127 240 226 / 45%);
+  color: var(--accent-strong);
+  font-family: var(--font-title);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-shadow:
+    3px 3px 0 var(--ink),
+    0 0 26px rgb(255 176 31 / 45%);
 }
 
 p {
@@ -87,27 +54,27 @@ p {
 input {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid var(--border);
+  border: 3px solid var(--ink);
   border-radius: var(--radius-small);
-  background: rgb(4 12 15 / 70%);
-  color: var(--text);
+  background: #fff4e0;
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: #241100;
   font: inherit;
 }
 
 input:focus-visible {
-  border-color: var(--glow);
-  outline: none;
-  box-shadow: 0 0 0 3px rgb(127 240 226 / 30%);
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 input::placeholder {
-  color: var(--text-muted);
+  color: #7a5a3a;
 }
 
 label {
   display: block;
   margin-bottom: 6px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .btn {
@@ -117,27 +84,34 @@ label {
   gap: 8px;
   min-height: 44px;
   padding: 10px 20px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-small);
   background: var(--surface-raised);
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    var(--shadow-button);
   color: var(--text);
   font: inherit;
-  font-weight: 600;
+  font-weight: 800;
   letter-spacing: 0.03em;
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+    transform 0.08s,
+    box-shadow 0.08s;
 }
 
 .btn:hover:not(:disabled) {
-  border-color: var(--glow);
-  box-shadow: 0 0 14px rgb(127 240 226 / 25%);
+  transform: translate(-1px, -1px);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    4px 4px 0 var(--ink);
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    1px 1px 0 var(--ink);
 }
 
 .btn:disabled {
@@ -146,26 +120,22 @@ label {
 }
 
 .btn-primary {
-  border-color: var(--accent);
   background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  box-shadow:
+    inset 0 0 0 1px #fff3b0,
+    var(--shadow-button);
   color: var(--accent-text);
-  box-shadow: var(--glow-accent);
 }
 
 .btn-primary:hover:not(:disabled) {
-  border-color: var(--accent-strong);
-  box-shadow: 0 0 26px rgb(255 138 61 / 65%);
+  box-shadow:
+    inset 0 0 0 1px #fff3b0,
+    4px 4px 0 var(--ink);
 }
 
 .btn-danger {
-  border-color: var(--danger);
-  background: transparent;
+  background: var(--surface);
   color: var(--danger);
-}
-
-.btn-danger:hover:not(:disabled) {
-  border-color: var(--danger);
-  box-shadow: 0 0 14px rgb(255 123 123 / 30%);
 }
 
 .btn-small {
@@ -176,9 +146,12 @@ label {
 
 .card {
   padding: 24px;
-  border: 1px solid var(--border);
+  border: 3px solid var(--ink);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgb(23 49 59 / 85%), rgb(15 34 41 / 92%));
+  /* Ben-Day dots on a dark panel. */
+  background:
+    radial-gradient(circle, rgb(255 176 31 / 9%) 1.2px, transparent 1.7px) 0 0 / 9px 9px,
+    var(--surface);
   box-shadow: var(--shadow-card);
 }
 

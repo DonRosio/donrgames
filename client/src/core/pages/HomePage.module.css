@@ -12,8 +12,19 @@
   text-align: center;
 }
 
+.hero p {
+  justify-self: center;
+  max-width: 60ch;
+  padding: 6px 16px;
+  border: 3px solid var(--ink);
+  background: #ffe58a;
+  box-shadow: var(--shadow-button);
+  color: #241100;
+  font-weight: 600;
+}
+
 .hero h1 {
-  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-size: clamp(2.4rem, 7vw, 4rem);
 }
 
 .flash {
@@ -71,6 +82,10 @@
 }
 
 .gameList h3 {
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

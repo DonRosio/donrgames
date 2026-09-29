@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CloudSheet } from './CloudSheet.tsx';
 import { Presenter } from './Presenter.tsx';
+import { Starburst } from './Starburst.tsx';
 import styles from './RoundTransition.module.css';
 
 /** Clouds slide in (0.8 s), the host speaks, then the clouds leave (0.8 s). */
@@ -67,7 +68,7 @@ export function RoundTransition({ text, hold = false, onDone }: RoundTransitionP
       />
       <div className={styles.stage} role="status">
         <Presenter className={styles.presenter} />
-        <p className={styles.bubble}>{text}</p>
+        <Starburst className={styles.burst}>{text}</Starburst>
       </div>
     </div>,
     document.body,

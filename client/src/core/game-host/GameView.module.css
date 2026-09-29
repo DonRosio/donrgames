@@ -10,6 +10,8 @@
   justify-content: flex-end;
   gap: 10px;
   padding: 8px 12px;
-  border: 1px dashed var(--border);
+  border: 3px solid var(--ink);
   border-radius: var(--radius-small);
+  background: rgb(11 5 3 / 88%);
+  box-shadow: var(--shadow-button);
 }

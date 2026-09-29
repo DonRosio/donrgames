@@ -1,15 +1,10 @@
 /* Self-hosted fonts only (CSP `font-src 'self'`). Files live in src/assets/fonts. */
 
-/*
- * "Simply Olive" DEMO: the demo build replaces the digits 0-9 with a "DEMO" badge, so they are left
- * out of the range and fall back to the next font of the stack. With the full (licensed) font,
- * remove the whole `unicode-range` line.
- */
+/* Titles: the site title and the names of the games. Everything else uses the system font. */
 @font-face {
-  font-family: 'Simply Olive';
-  src: url('../assets/fonts/simply-olive-demo.woff2') format('woff2');
+  font-family: 'Shizuoka Cyberpunk';
+  src: url('../assets/fonts/shizuoka-cyberpunk.woff2') format('woff2');
   font-display: swap;
-  unicode-range: U+0020-002F, U+003A-007E, U+00A0-00FF, U+0152-0153, U+2010-2027, U+20AC;
 }
 
 /* Only for the presenter's line of the round transition ("Manche suivante !"). */

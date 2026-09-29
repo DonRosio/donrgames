@@ -13,15 +13,23 @@
   gap: 12px;
 }
 
+.round,
+.step {
+  padding: 2px 14px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-small);
+  background: rgb(11 5 3 / 88%);
+  box-shadow: var(--shadow-button);
+  font-weight: 800;
+}
+
 .round {
   color: var(--text-muted);
-  font-weight: 600;
 }
 
 .step {
-  color: var(--accent);
-  font-size: 1.3rem;
-  font-weight: 800;
+  color: var(--accent-strong);
+  font-size: 1.2rem;
 }
 
 .center {
@@ -37,8 +45,15 @@
 }
 
 .hint {
-  text-align: center;
+  justify-self: center;
+  padding: 4px 18px;
+  border: 3px solid var(--ink);
+  background: #ffe58a;
+  box-shadow: var(--shadow-button);
+  color: #241100;
   font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .reminder {
@@ -105,6 +120,11 @@
 }
 
 .done {
+  justify-self: center;
+  padding: 6px 18px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-small);
+  background: rgb(11 5 3 / 88%);
   color: var(--success);
   font-size: 1.1rem;
   font-weight: 700;
@@ -112,6 +132,10 @@
 }
 
 .warning {
+  padding: 8px 14px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-small);
+  background: rgb(11 5 3 / 88%);
   color: var(--accent);
   font-weight: 600;
 }

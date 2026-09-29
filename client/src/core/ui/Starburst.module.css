@@ -1,0 +1,32 @@
+.burst {
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 10 / 6;
+}
+
+.shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  padding: 6% 10%;
+  color: #fff;
+  font-family: 'Heyam', system-ui, sans-serif;
+  font-size: 16cqw;
+  line-height: 0.98;
+  text-align: center;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 0.9cqw #0b0503;
+  text-shadow:
+    0.8cqw 0.8cqw 0 #0b0503,
+    0 0 0 #0b0503;
+}

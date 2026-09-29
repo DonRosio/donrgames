@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { HomePage } from '../core/pages/HomePage.tsx';
 import { RoomPage } from '../core/pages/RoomPage.tsx';
+import { Backdrop } from '../core/ui/Backdrop.tsx';
 import { matchRoute } from './routes.ts';
 import { usePathname } from './router.ts';
 
@@ -10,6 +11,15 @@ const DevGallery = import.meta.env.DEV
   : null;
 
 export function App() {
+  return (
+    <>
+      <Backdrop />
+      <Page />
+    </>
+  );
+}
+
+function Page() {
   const route = matchRoute(usePathname());
   if (route.name === 'room') return <RoomPage key={route.code} code={route.code} />;
   if (route.name === 'devGallery' && DevGallery) {
