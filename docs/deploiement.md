@@ -22,7 +22,7 @@ Caddy a besoin que le domaine résolve déjà pour obtenir son certificat.
 Envoie d'abord les modèles de configuration versionnés dans ce dépôt (depuis ta machine) :
 
 ```bash
-scp -r deploy root@serveur:/root/deploy   # ou un autre utilisateur avec sudo
+scp -r deploy ubuntu@serveur:deploy   # « ubuntu » : l'utilisateur créé par OVH, qui a sudo
 ```
 
 Puis, sur le serveur :
@@ -60,7 +60,7 @@ sans qu'il soit connecté, et de démarrer au boot.
 ## 2. Caddy
 
 ```bash
-sudo cp /root/deploy/Caddyfile /etc/caddy/Caddyfile   # à adapter avec ton domaine
+sudo cp ~/deploy/Caddyfile /etc/caddy/Caddyfile   # à adapter avec ton domaine
 sudo nano /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
@@ -70,15 +70,15 @@ n'est nécessaire. Il gère aussi le passage en WebSocket pour Socket.IO sans r�
 
 ## 3. Dépôt bare et service (une fois)
 
-Toujours sur le serveur, en root ou avec sudo (`/root/deploy` vient de l'étape 1) :
+Toujours sur le serveur, avec ton utilisateur sudo (`~/deploy` vient de l'étape 1, dans le dossier de ton utilisateur) :
 
 ```bash
 sudo -u mini-jeux mkdir -p /home/mini-jeux/mini-jeux/current /home/mini-jeux/.config/systemd/user
 sudo -u mini-jeux git init --bare /home/mini-jeux/mini-jeux/repo.git
 sudo install -o mini-jeux -g mini-jeux -m 755 \
-  /root/deploy/post-receive /home/mini-jeux/mini-jeux/repo.git/hooks/post-receive
+  ~/deploy/post-receive /home/mini-jeux/mini-jeux/repo.git/hooks/post-receive
 sudo install -o mini-jeux -g mini-jeux -m 644 \
-  /root/deploy/mini-jeux.service /home/mini-jeux/.config/systemd/user/mini-jeux.service
+  ~/deploy/mini-jeux.service /home/mini-jeux/.config/systemd/user/mini-jeux.service
 sudo -u mini-jeux XDG_RUNTIME_DIR=/run/user/"$(id -u mini-jeux)" systemctl --user daemon-reload
 sudo -u mini-jeux XDG_RUNTIME_DIR=/run/user/"$(id -u mini-jeux)" systemctl --user enable mini-jeux
 ```
