@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type {
   ActionTypeOf,
   GameContract,
@@ -41,6 +41,11 @@ export interface ClientGame<C extends GameContract, V extends { phase: PhaseOf<C
     [P in PhaseOf<C>]: ComponentType<GameScreenProps<C, Extract<V, { phase: P }>>>;
   };
   errorMessages: Record<GameErrorOf<C>, string>;
+  /**
+   * Optional wrapper around the screen of every phase. It stays mounted from one phase to the
+   * next, so it can keep state across phases (e.g. play a transition when the round changes).
+   */
+  frame?: ComponentType<{ view: V; children: ReactNode }>;
 }
 
 // The registry holds games of different types; each game module stays precisely typed.

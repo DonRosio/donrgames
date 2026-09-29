@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { Fragment, useCallback, useState } from 'react';
 import type { GameViewEnvelope, MediaRef, RoomView } from '@mini-jeux/shared';
 import { isErrorCode } from '@mini-jeux/shared';
 import { clientGames } from '../../games/registry.ts';
@@ -59,24 +59,27 @@ export function GameView({ room, envelope, session }: GameViewProps) {
 
   const phase = (envelope.view as { phase: string }).phase;
   const Screen = (game.screens as Record<string, AnyClientGame['screens'][string]>)[phase];
+  const Frame = game.frame ?? Fragment;
+
+  const screen = Screen ? (
+    <Screen
+      view={envelope.view}
+      room={room}
+      me={me}
+      isHost={isHost}
+      act={act}
+      upload={upload}
+      fetchMedia={fetchMedia}
+      serverNow={serverNow}
+    />
+  ) : (
+    <p className="error">Écran manquant pour la phase « {phase} ».</p>
+  );
 
   return (
     <div className={styles.view}>
       {isHost && <HostBar session={session} />}
-      {Screen ? (
-        <Screen
-          view={envelope.view}
-          room={room}
-          me={me}
-          isHost={isHost}
-          act={act}
-          upload={upload}
-          fetchMedia={fetchMedia}
-          serverNow={serverNow}
-        />
-      ) : (
-        <p className="error">Écran manquant pour la phase « {phase} ».</p>
-      )}
+      {game.frame ? <Frame view={envelope.view}>{screen}</Frame> : screen}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { defineClientGame } from '../../core/game-host/client-game.ts';
 import { BroadcastScreen } from './BroadcastScreen.tsx';
 import { LoadingScreen } from './LoadingScreen.tsx';
 import { RecordingScreen } from './RecordingScreen.tsx';
+import { RoundFrame } from './RoundFrame.tsx';
 import { RevealScreen } from './RevealScreen.tsx';
 import { RoundResultsScreen } from './RoundResultsScreen.tsx';
 import { TakeScreen } from './TakeScreen.tsx';
@@ -20,6 +21,7 @@ export const dubbingClient = defineClientGame<DubbingContract, DubbingView>({
     reveal: RevealScreen,
     roundResults: RoundResultsScreen,
   },
+  frame: RoundFrame,
   errorMessages: {
     STALE_SYNC: 'Cette étape est déjà passée.',
     TAKE_LOCKED: 'Ta prise est déjà validée.',

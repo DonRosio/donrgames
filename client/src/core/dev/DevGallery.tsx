@@ -7,6 +7,7 @@ import { ConnectionBanner } from '../ui/ConnectionBanner.tsx';
 import { Countdown } from '../ui/Countdown.tsx';
 import { PlayerList } from '../ui/PlayerList.tsx';
 import { RankingScreen } from '../ui/RankingScreen.tsx';
+import { RoundTransition } from '../ui/RoundTransition.tsx';
 import { Scoreboard } from '../ui/Scoreboard.tsx';
 import { VotePanel } from '../ui/VotePanel.tsx';
 import { VoteReveal } from '../ui/VoteReveal.tsx';
@@ -51,6 +52,8 @@ export function DevGallery() {
   const [confirming, setConfirming] = useState(false);
   const [vote, setVote] = useState<number | null>(null);
   const [revealKey, setRevealKey] = useState(0);
+  const [transition, setTransition] = useState(false);
+  const [holdTransition, setHoldTransition] = useState(false);
 
   return (
     <main className={styles.page}>
@@ -135,6 +138,43 @@ export function DevGallery() {
           />
           <SettingsForm defs={settingDefs} values={settings} editable={false} onChange={() => {}} />
         </div>
+      </Section>
+
+      <Section title="RoundTransition (nuages + présentateur)">
+        <div className={styles.row}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              setHoldTransition(false);
+              setTransition(true);
+            }}
+          >
+            Lancer
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setHoldTransition(true);
+              setTransition(true);
+            }}
+          >
+            Lancer et retenir les nuages
+          </button>
+          {transition && holdTransition && (
+            <button type="button" className="btn" onClick={() => setHoldTransition(false)}>
+              Relâcher
+            </button>
+          )}
+        </div>
+        {transition && (
+          <RoundTransition
+            text="Manche suivante !"
+            hold={holdTransition}
+            onDone={() => setTransition(false)}
+          />
+        )}
       </Section>
 
       <Section title="ConfirmDialog">

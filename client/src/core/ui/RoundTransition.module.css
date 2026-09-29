@@ -1,0 +1,161 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* A sheet larger than the screen: fully off-screen at translate(-100%, -100%). */
+.sheet {
+  position: absolute;
+  top: -15vh;
+  left: -15vw;
+  width: 130vw;
+  height: 130vh;
+  /* Puffs centred on the edges stick out of the viewBox. */
+  overflow: visible;
+  filter: drop-shadow(0 0 26px rgb(0 40 70 / 40%));
+  animation: sheet-in 0.8s cubic-bezier(0.25, 0.7, 0.3, 1) var(--delay, 0s) both;
+  will-change: transform;
+}
+
+.leaving .sheet {
+  animation: sheet-out 0.8s cubic-bezier(0.4, 0, 0.6, 1) var(--delay, 0s) both;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 3vw, 44px);
+  padding: 24px;
+  animation: stage-in 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 0.45s both;
+}
+
+.leaving .stage {
+  animation: stage-out 0.35s ease-in both;
+}
+
+.presenter {
+  height: clamp(260px, 58vh, 520px);
+  width: auto;
+  transform-origin: 50% 100%;
+  animation: bob 1.1s ease-in-out infinite alternate;
+}
+
+/* Speech bubble, tail pointing at the presenter. */
+.bubble {
+  position: relative;
+  max-width: 18ch;
+  padding: 0.5em 0.9em 0.6em;
+  border: 5px solid #0c2a36;
+  border-radius: 34px;
+  background: #fffdf4;
+  box-shadow: 8px 8px 0 rgb(12 42 54 / 30%);
+  color: #12303d;
+  font-family: 'Heyam', 'Simply Olive', system-ui, sans-serif;
+  font-size: clamp(1.8rem, 5.2vw, 4rem);
+  line-height: 1.05;
+  text-align: center;
+}
+
+.bubble::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -19px;
+  width: 30px;
+  height: 30px;
+  border-bottom: 5px solid #0c2a36;
+  border-left: 5px solid #0c2a36;
+  background: #fffdf4;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translate(-100%, -100%);
+  }
+
+  to {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes sheet-out {
+  from {
+    transform: translate(0, 0);
+  }
+
+  to {
+    transform: translate(100%, 100%);
+  }
+}
+
+@keyframes stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(46px) scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes stage-out {
+  to {
+    opacity: 0;
+    transform: translateY(46px) scale(0.92);
+  }
+}
+
+@keyframes bob {
+  from {
+    transform: translateY(0) rotate(-1deg);
+  }
+
+  to {
+    transform: translateY(-8px) rotate(1deg);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .stage {
+    animation-name: fade-in;
+    animation-duration: 0.4s;
+    animation-delay: 0s;
+  }
+
+  .leaving .sheet,
+  .leaving .stage {
+    animation-name: fade-out;
+    animation-duration: 0.4s;
+  }
+
+  .presenter {
+    animation: none;
+  }
+}

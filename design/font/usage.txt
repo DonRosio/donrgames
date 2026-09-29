@@ -1,0 +1,2 @@
+Heyam -> Utilise cette police pour la phrase "Manche suivante !" prononcée par le présentateur lors de la transition avec les nuages.
+Simply Olive DEMO -> Utilise cette police pour le texte du site en général.

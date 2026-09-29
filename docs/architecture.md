@@ -63,6 +63,7 @@ mini-jeux/
 ├── tsconfig.base.json · eslint.config.js · .prettierrc · .nvmrc (24) · .env.example
 ├── CLAUDE.md
 ├── playwright.config.ts    tests de bout en bout (Chrome et Brave installés)
+├── design/                 sources de la direction artistique : moodboard annoté, polices d'origine (hors du bundle)
 ├── deploy/                 unité systemd (--user), Caddyfile, hook post-receive : voir docs/deploiement.md
 ├── docs/                   cahier des charges, architecture, revue de sécurité, déploiement
 ├── scripts/                dev.ts (serveur + client en parallèle), certs.ts (HTTPS local), content-check.ts
@@ -115,7 +116,8 @@ mini-jeux/
         ├── games/
         │   ├── registry.ts une entrée par jeu
         │   └── dubbing/    index.ts + un écran par phase
-        └── styles/         tokens.css, global.css
+        ├── assets/fonts/   polices auto-hébergées (WOFF2)
+        └── styles/         tokens.css (palette, rayons, polices), fonts.css, global.css (fond, boutons, cartes)
 ```
 
 ## 3. Contrats partagés (`shared`)
@@ -499,17 +501,18 @@ Dans le salon : code en grand, bouton « Copier le lien », liste des joueurs av
 
 ### 5.4 Composants communs (`client/src/core/ui`)
 
-| Composant                                                                   | Rôle                                                                                                                                |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `Scoreboard`                                                                | scores par joueur, avec les gains de la manche                                                                                      |
-| `RankingScreen`                                                             | classement avec ex æquo ; sert aussi d'écran de fin de partie du socle                                                              |
-| `Countdown`                                                                 | compte à rebours vers une échéance serveur (compensée) ou sur une durée locale (le 3-2-1 avant une prise)                           |
-| `VotePanel`                                                                 | boutons de vote configurables (options, désactivation du +2…)                                                                       |
-| `VoteReveal`                                                                | tableau des votes : chaque « +1 » ou « +2 » apparaît puis s'estompe, puis le total s'affiche                                        |
-| `SyncedVideoPlayer`                                                         | préchargement authentifié → signal « prêt » → départ à `startAt`, avec ou sans son, piste audio externe calée, correction de dérive |
-| `AudioRecorder` (+ `useAudioRecorder`, `recordOverVideo`)                   | enregistrement calé sur une vidéo avec mesure du décalage ; choix du format                                                         |
-| `LevelMeter`                                                                | vumètre : montre que le micro choisi dans le navigateur capte bien, avec une alerte s'il ne capte rien                              |
-| `PlayerList`, `HostBar`, `ConnectionBanner`, `SoundUnlock`, `ConfirmDialog` | éléments du salon et de la partie                                                                                                   |
+| Composant                                                                   | Rôle                                                                                                                                                                                                                                                                                       |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Scoreboard`                                                                | scores par joueur, avec les gains de la manche                                                                                                                                                                                                                                             |
+| `RankingScreen`                                                             | classement avec ex æquo ; sert aussi d'écran de fin de partie du socle                                                                                                                                                                                                                     |
+| `Countdown`                                                                 | compte à rebours vers une échéance serveur (compensée) ou sur une durée locale (le 3-2-1 avant une prise)                                                                                                                                                                                  |
+| `VotePanel`                                                                 | boutons de vote configurables (options, désactivation du +2…)                                                                                                                                                                                                                              |
+| `VoteReveal`                                                                | tableau des votes : chaque « +1 » ou « +2 » apparaît puis s'estompe, puis le total s'affiche                                                                                                                                                                                               |
+| `SyncedVideoPlayer`                                                         | préchargement authentifié → signal « prêt » → départ à `startAt`, avec ou sans son, piste audio externe calée, correction de dérive                                                                                                                                                        |
+| `AudioRecorder` (+ `useAudioRecorder`, `recordOverVideo`)                   | enregistrement calé sur une vidéo avec mesure du décalage ; choix du format                                                                                                                                                                                                                |
+| `LevelMeter`                                                                | vumètre : montre que le micro choisi dans le navigateur capte bien, avec une alerte s'il ne capte rien                                                                                                                                                                                     |
+| `PlayerList`, `HostBar`, `ConnectionBanner`, `SoundUnlock`, `ConfirmDialog` | éléments du salon et de la partie                                                                                                                                                                                                                                                          |
+| `RoundTransition` (+ `CloudSheet`, `Presenter`)                             | transition entre deux manches : nuages qui glissent en diagonale (haut gauche → bas droit), présentateur au micro dans une bulle (police Heyam), portail sur `document.body`, ne capte aucun clic. `hold` garde les nuages pendant un chargement. `prefers-reduced-motion` : simple fondu. |
 
 Mise en page pensée pour un écran de PC (vidéo grande, joueurs et commandes autour), qui reste utilisable dans une fenêtre étroite. Textes en français, polices système.
 
@@ -534,6 +537,9 @@ export default defineClientGame<typeof dubbing, DubbingView>({
   },
   // Messages français des erreurs déclarées dans le contrat (TypeScript impose qu'aucune ne manque)
   errorMessages: { ALREADY_VOTED: 'Tu as déjà voté.' /* … */ },
+  // Facultatif : enveloppe restée montée d'une phase à l'autre (Doublage : `RoundFrame` lance la
+  // transition quand le numéro de manche augmente ; un rechargement en cours de manche n'en joue pas).
+  frame: RoundFrame,
 });
 
 export interface GameScreenProps<C extends GameContract, V> {
