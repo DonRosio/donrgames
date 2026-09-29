@@ -1,30 +1,29 @@
 :root {
   color-scheme: dark;
 
-  /* Comic-book sunset: dark ink ground, golden sun, burnt-orange sky. */
+  /* Golden hour over the countryside: deep forest green panels, warm cream text, amber accents. */
   --ink: #0b0503;
-  --bg: #120904;
-  --surface: #211209;
-  --surface-raised: #33200f;
-  --border: #a86a2c;
-  --text: #fff4e0;
-  --text-muted: #dcbd93;
-  --accent: #ffb01f;
-  --accent-strong: #ffd23a;
-  --accent-text: #241100;
+  --bg: #142520;
+  --surface: #1a2d2a;
+  --surface-raised: #2a423b;
+  --border: #9c8a58;
+  --text: #fff6e4;
+  --text-muted: #d8c9a6;
+  --accent: #f7b544;
+  --accent-strong: #ffd46a;
+  --accent-text: #2a1a05;
   --sun: #fff0a0;
-  --dusk: #8e2c14;
-  --danger: #ff7a68;
-  --success: #86e28e;
-  --focus: #ffe58a;
+  --danger: #ff8a78;
+  --success: #9be08c;
+  --focus: #ffe08a;
 
-  --radius: 14px;
-  --radius-small: 10px;
+  --radius: 18px;
+  --radius-small: 12px;
   --gap: 16px;
 
-  /* Comic panels: thick ink outline plus a hard, offset shadow. */
-  --shadow-card: 0 0 0 2px var(--border), 6px 6px 0 var(--ink);
-  --shadow-button: 3px 3px 0 var(--ink);
+  /* Soft panels: gentle shadows and a thin light edge, nothing hard. */
+  --shadow-card: 0 14px 34px rgb(5 15 12 / 45%), inset 0 1px 0 rgb(255 240 200 / 12%);
+  --shadow-button: 0 3px 8px rgb(5 15 12 / 40%);
 
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif;
   --font-title: 'Shizuoka Cyberpunk', system-ui, sans-serif;

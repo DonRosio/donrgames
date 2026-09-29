@@ -37,10 +37,11 @@
 /* The host stands bottom left, cropped by the screen, and shouts from the top right. */
 .presenter {
   position: absolute;
-  bottom: 0;
-  left: 2vw;
-  height: min(86vh, 100vw);
+  bottom: -10vh;
+  left: 0;
+  height: min(106vh, 150vw);
   width: auto;
+  filter: drop-shadow(0 0 22px rgb(255 190 110 / 45%)) drop-shadow(0 6px 10px rgb(60 20 0 / 30%));
   transform-origin: 50% 100%;
   animation: bob 0.9s ease-in-out infinite alternate;
 }

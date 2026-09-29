@@ -15,11 +15,12 @@
 .hero p {
   justify-self: center;
   max-width: 60ch;
-  padding: 6px 16px;
-  border: 3px solid var(--ink);
-  background: #ffe58a;
+  padding: 6px 18px;
+  border: 1px solid #b89a5e;
+  border-radius: var(--radius-small);
+  background: #f6ecd2;
   box-shadow: var(--shadow-button);
-  color: #241100;
+  color: #2a1a05;
   font-weight: 600;
 }
 

@@ -16,11 +16,11 @@
 .round,
 .step {
   padding: 2px 14px;
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-small);
-  background: rgb(11 5 3 / 88%);
+  border: 1px solid rgb(255 232 170 / 28%);
+  border-radius: 999px;
+  background: rgb(16 30 27 / 82%);
   box-shadow: var(--shadow-button);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .round {
@@ -47,10 +47,11 @@
 .hint {
   justify-self: center;
   padding: 4px 18px;
-  border: 3px solid var(--ink);
-  background: #ffe58a;
+  border: 1px solid #b89a5e;
+  border-radius: var(--radius-small);
+  background: #f6ecd2;
   box-shadow: var(--shadow-button);
-  color: #241100;
+  color: #2a1a05;
   font-size: 1.1rem;
   font-weight: 700;
   text-align: center;
@@ -122,9 +123,9 @@
 .done {
   justify-self: center;
   padding: 6px 18px;
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-small);
-  background: rgb(11 5 3 / 88%);
+  border: 1px solid rgb(255 232 170 / 28%);
+  border-radius: 999px;
+  background: rgb(16 30 27 / 82%);
   color: var(--success);
   font-size: 1.1rem;
   font-weight: 700;
@@ -133,9 +134,9 @@
 
 .warning {
   padding: 8px 14px;
-  border: 3px solid var(--ink);
+  border: 1px solid rgb(255 232 170 / 28%);
   border-radius: var(--radius-small);
-  background: rgb(11 5 3 / 88%);
+  background: rgb(16 30 27 / 82%);
   color: var(--accent);
   font-weight: 600;
 }

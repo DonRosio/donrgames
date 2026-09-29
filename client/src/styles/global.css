@@ -38,8 +38,8 @@ h1 {
   font-weight: 400;
   letter-spacing: 0.04em;
   text-shadow:
-    3px 3px 0 var(--ink),
-    0 0 26px rgb(255 176 31 / 45%);
+    0 3px 0 #4a2a0a,
+    0 0 28px rgb(255 190 90 / 55%);
 }
 
 p {
@@ -54,11 +54,11 @@ p {
 input {
   width: 100%;
   padding: 12px 14px;
-  border: 3px solid var(--ink);
+  border: 1px solid #c9b483;
   border-radius: var(--radius-small);
-  background: #fff4e0;
-  box-shadow: inset 0 0 0 1px var(--border);
-  color: #241100;
+  background: #fff6e4;
+  box-shadow: inset 0 2px 4px rgb(90 60 20 / 15%);
+  color: #2a1a05;
   font: inherit;
 }
 
@@ -68,7 +68,7 @@ input:focus-visible {
 }
 
 input::placeholder {
-  color: #7a5a3a;
+  color: #8a7050;
 }
 
 label {
@@ -83,35 +83,31 @@ label {
   justify-content: center;
   gap: 8px;
   min-height: 44px;
-  padding: 10px 20px;
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-small);
-  background: var(--surface-raised);
-  box-shadow:
-    inset 0 0 0 1px var(--border),
-    var(--shadow-button);
+  padding: 10px 22px;
+  border: 1px solid rgb(255 232 170 / 35%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #34504a, var(--surface-raised));
+  box-shadow: var(--shadow-button);
   color: var(--text);
   font: inherit;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   cursor: pointer;
   transition:
-    transform 0.08s,
-    box-shadow 0.08s;
+    transform 0.12s,
+    box-shadow 0.12s,
+    border-color 0.12s;
 }
 
 .btn:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow:
-    inset 0 0 0 1px var(--accent),
-    4px 4px 0 var(--ink);
+  transform: translateY(-1px);
+  border-color: var(--accent-strong);
+  box-shadow: 0 6px 14px rgb(5 15 12 / 45%);
 }
 
 .btn:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow:
-    inset 0 0 0 1px var(--accent),
-    1px 1px 0 var(--ink);
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgb(5 15 12 / 40%);
 }
 
 .btn:disabled {
@@ -120,21 +116,18 @@ label {
 }
 
 .btn-primary {
+  border-color: #ffe9a8;
   background: linear-gradient(180deg, var(--accent-strong), var(--accent));
-  box-shadow:
-    inset 0 0 0 1px #fff3b0,
-    var(--shadow-button);
   color: var(--accent-text);
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow:
-    inset 0 0 0 1px #fff3b0,
-    4px 4px 0 var(--ink);
+  border-color: #fff3c8;
+  box-shadow: 0 6px 18px rgb(247 181 68 / 40%);
 }
 
 .btn-danger {
-  background: var(--surface);
+  background: rgb(26 45 42 / 90%);
   color: var(--danger);
 }
 
@@ -146,12 +139,9 @@ label {
 
 .card {
   padding: 24px;
-  border: 3px solid var(--ink);
+  border: 1px solid rgb(255 232 170 / 24%);
   border-radius: var(--radius);
-  /* Ben-Day dots on a dark panel. */
-  background:
-    radial-gradient(circle, rgb(255 176 31 / 9%) 1.2px, transparent 1.7px) 0 0 / 9px 9px,
-    var(--surface);
+  background: rgb(22 40 36 / 88%);
   box-shadow: var(--shadow-card);
 }
 

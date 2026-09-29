@@ -2,28 +2,39 @@
   position: fixed;
   inset: 0;
   z-index: -1;
-  width: 100%;
-  height: 100%;
+  overflow: hidden;
   pointer-events: none;
 }
 
-.sun {
-  transform-origin: 590px 612px;
-  animation: pulse 4s ease-in-out infinite alternate;
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
-@keyframes pulse {
+/* Compositor-only drift: no repaint, so it never competes with the synchronized videos. */
+/* Puffs may stick out of the picture while the layer drifts. */
+.clouds {
+  overflow: visible;
+  animation: drift 120s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes drift {
   from {
-    transform: scale(1);
+    transform: translateX(-1.6%);
   }
 
   to {
-    transform: scale(1.07);
+    transform: translateX(1.6%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sun {
+  /* Puffs may stick out of the picture while the layer drifts. */
+  .clouds {
+    overflow: visible;
     animation: none;
   }
 }
