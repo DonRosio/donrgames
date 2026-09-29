@@ -23,7 +23,6 @@ function points(scale: number, seed: number): string {
 }
 
 const OUTER = points(0.97, 4);
-const INNER = points(0.86, 4);
 
 /** Comic-book explosion holding a shout. Its text scales with its width (container units). */
 export function Starburst({ className, children }: { className?: string; children: ReactNode }) {
@@ -36,21 +35,7 @@ export function Starburst({ className, children }: { className?: string; childre
         aria-hidden="true"
         focusable="false"
       >
-        <polygon points={OUTER} fill={INK} transform="translate(16 18)" />
-        <polygon
-          points={OUTER}
-          fill="#e8431a"
-          stroke={INK}
-          strokeWidth="9"
-          strokeLinejoin="miter"
-        />
-        <polygon
-          points={INNER}
-          fill="#ffd21f"
-          stroke={INK}
-          strokeWidth="5"
-          strokeLinejoin="miter"
-        />
+        <polygon points={OUTER} fill="#fff" stroke={INK} strokeWidth="10" strokeLinejoin="miter" />
       </svg>
       <p className={styles.text}>{children}</p>
     </div>
