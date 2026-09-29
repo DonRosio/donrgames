@@ -12,6 +12,8 @@ GIT_DIR="$HOME/mini-jeux/repo.git"
 
 git --work-tree="$WORKTREE" --git-dir="$GIT_DIR" checkout -f main
 cd "$WORKTREE"
+cp "$WORKTREE/deploy/mini-jeux.service" "$HOME/.config/systemd/user/mini-jeux.service"
+systemctl --user daemon-reload
 npm ci
 npm run build
 systemctl --user restart mini-jeux

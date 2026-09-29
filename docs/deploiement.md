@@ -155,8 +155,7 @@ ssh mini-jeux@serveur systemctl --user restart mini-jeux   # relit selection.txt
 
 ## Fichiers de référence
 
-- [`deploy/mini-jeux.service`](../deploy/mini-jeux.service) — unité systemd (`--user`, durcie :
-  pas d'écriture disque nécessaire, tout l'état est en RAM).
+- [`deploy/mini-jeux.service`](../deploy/mini-jeux.service) — unité systemd (`--user`, durcissement minimal : sous Ubuntu 24.04 les protections `ProtectSystem`, `PrivateTmp`… font échouer le démarrage en `status=218/CAPABILITIES`).
 - [`deploy/Caddyfile`](../deploy/Caddyfile) — reverse proxy HTTPS.
 - [`deploy/post-receive`](../deploy/post-receive) — hook de déploiement (`git push` → build →
   redémarrage).

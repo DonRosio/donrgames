@@ -15,14 +15,11 @@ Restart=on-failure
 RestartSec=5
 # Un plantage laisse tout en RAM : rien à nettoyer avant de redémarrer.
 
-# Durcissement (utilisateur système sans privilège ; état 100 % en RAM, aucune écriture disque).
+# Durcissement minimal : le service tourne déjà sous un utilisateur sans privilège, et tout
+# l'état est en RAM. Les protections qui isolent le système de fichiers ou abaissent les
+# « capabilities » (ProtectSystem, PrivateTmp, ProtectKernel*…) échouent en unité --user sur
+# Ubuntu 24.04 (status=218/CAPABILITIES) : elles ne sont pas utilisées.
 NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=read-only
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
 RestrictSUIDSGID=true
 LockPersonality=true
 
