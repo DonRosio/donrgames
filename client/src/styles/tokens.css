@@ -1,12 +1,12 @@
 :root {
   color-scheme: dark;
 
-  /* Golden hour over the countryside: deep forest green panels, warm cream text, amber accents. */
+  /* Golden hour over the rooftops: dark warm-brown panels, cream text, amber accents. */
   --ink: #0b0503;
-  --bg: #142520;
-  --surface: #1a2d2a;
-  --surface-raised: #2a423b;
-  --border: #9c8a58;
+  --bg: #241418;
+  --surface: #2b1c1f;
+  --surface-raised: #43302c;
+  --border: #b58b5a;
   --text: #fff6e4;
   --text-muted: #d8c9a6;
   --accent: #f7b544;
@@ -22,6 +22,9 @@
   --gap: 16px;
 
   /* Soft panels: gentle shadows and a thin light edge, nothing hard. */
+  /* Thin light frame around the videos. */
+  --frame: 3px solid #ecd39a;
+  --shadow-frame: 0 0 0 1px rgb(50 25 10 / 75%), 0 10px 28px rgb(0 0 0 / 45%);
   --shadow-card: 0 14px 34px rgb(5 15 12 / 45%), inset 0 1px 0 rgb(255 240 200 / 12%);
   --shadow-button: 0 3px 8px rgb(5 15 12 / 40%);
 

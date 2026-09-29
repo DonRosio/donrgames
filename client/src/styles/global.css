@@ -86,7 +86,7 @@ label {
   padding: 10px 22px;
   border: 1px solid rgb(255 232 170 / 35%);
   border-radius: 999px;
-  background: linear-gradient(180deg, #34504a, var(--surface-raised));
+  background: linear-gradient(180deg, #57413b, var(--surface-raised));
   box-shadow: var(--shadow-button);
   color: var(--text);
   font: inherit;
@@ -127,7 +127,7 @@ label {
 }
 
 .btn-danger {
-  background: rgb(26 45 42 / 90%);
+  background: rgb(43 28 31 / 92%);
   color: var(--danger);
 }
 
@@ -141,7 +141,7 @@ label {
   padding: 24px;
   border: 1px solid rgb(255 232 170 / 24%);
   border-radius: var(--radius);
-  background: rgb(22 40 36 / 88%);
+  background: rgb(36 22 26 / 88%);
   box-shadow: var(--shadow-card);
 }
 

@@ -1,8 +1,10 @@
 .player {
   position: relative;
   overflow: hidden;
+  border: var(--frame);
   border-radius: var(--radius);
   background: #000;
+  box-shadow: var(--shadow-frame);
 }
 
 .video {

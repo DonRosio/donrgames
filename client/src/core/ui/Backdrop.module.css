@@ -2,39 +2,23 @@
   position: fixed;
   inset: 0;
   z-index: -1;
-  overflow: hidden;
+  background-color: #7a3f2c;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: cover;
   pointer-events: none;
 }
 
-.layer {
+/* Darkens the top and the bottom a little so that text stays readable on the bright sky. */
+.backdrop::after {
+  content: '';
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-/* Compositor-only drift: no repaint, so it never competes with the synchronized videos. */
-/* Puffs may stick out of the picture while the layer drifts. */
-.clouds {
-  overflow: visible;
-  animation: drift 120s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-@keyframes drift {
-  from {
-    transform: translateX(-1.6%);
-  }
-
-  to {
-    transform: translateX(1.6%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Puffs may stick out of the picture while the layer drifts. */
-  .clouds {
-    overflow: visible;
-    animation: none;
-  }
+  background: linear-gradient(
+    180deg,
+    rgb(30 12 20 / 40%) 0%,
+    rgb(30 12 20 / 8%) 32%,
+    rgb(30 12 20 / 0%) 55%,
+    rgb(20 8 12 / 45%) 100%
+  );
 }

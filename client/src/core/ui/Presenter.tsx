@@ -1,4 +1,4 @@
-import presenterUrl from '../../assets/presenter.png';
+import presenterUrl from '../../assets/presenter.webp';
 
 /**
  * The host of the round transition, from the transition wireframe: cut out of it, warmed up and
