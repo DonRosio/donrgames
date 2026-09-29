@@ -1,6 +1,11 @@
-# Reverse proxy HTTPS : voir docs/deploiement.md. Remplace le domaine par le tien.
-# Caddy obtient et renouvelle seul le certificat Let's Encrypt (le domaine doit déjà pointer
-# vers ce serveur), et gère lui-même le passage en WebSocket pour Socket.IO.
-jeux.example.com {
+# Reverse proxy HTTPS : voir docs/deploiement.md. Remplace les domaines par les tiens.
+# Caddy obtient et renouvelle seul les certificats Let's Encrypt (les domaines doivent déjà
+# pointer vers ce serveur), et gère lui-même le passage en WebSocket pour Socket.IO.
+www.donrgames.fr {
 	reverse_proxy 127.0.0.1:3000
+}
+
+# Le nom sans « www » renvoie vers le site (PUBLIC_ORIGIN n'accepte qu'une seule origine).
+donrgames.fr {
+	redir https://www.donrgames.fr{uri} permanent
 }
