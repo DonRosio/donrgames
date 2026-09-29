@@ -159,3 +159,11 @@ ssh mini-jeux@serveur systemctl --user restart mini-jeux   # relit selection.txt
 - [`deploy/Caddyfile`](../deploy/Caddyfile) — reverse proxy HTTPS.
 - [`deploy/post-receive`](../deploy/post-receive) — hook de déploiement (`git push` → build →
   redémarrage).
+
+## Retours du premier déploiement (OVHcloud, septembre 2026)
+
+- **Mot de passe expiré** : à la création du VPS, OVH marque le mot de passe de l'utilisateur `ubuntu` comme expiré, et Ubuntu impose de le changer même en se connectant par clé. Si le mail d'OVH ne contient pas de mot de passe, utiliser « Réinitialiser le mot de passe » dans l'espace client, puis le mot de passe reçu comme « Current password ».
+- **Agent SSH** : `agent refused operation` vient de l'agent du bureau, pas du serveur. Le raccourci `Host serveur` avec `IdentityAgent none` (voir `CLAUDE.md`) le contourne.
+- **Réinstallation** : l'empreinte du serveur change ; `ssh-keygen -R <ip>` avant de se reconnecter.
+- **Domaine** : le formulaire DNS d'OVH exige un sous-domaine (`www` ici) ; `PUBLIC_ORIGIN` et le `Caddyfile` utilisent le nom exact (`https://www.donrgames.fr`). Le nom nu ne mène nulle part sans redirection.
+- **NIS2** : OVH peut demander de valider les coordonnées du titulaire d'un `.fr` (mail avec échéance) ; ne pas cliquer les liens du mail, passer par l'espace client (Opérations en cours, Gestion des contacts).
