@@ -20,10 +20,54 @@
   letter-spacing: 0.04em;
 }
 
-/* Role card */
+/* Role card: text on the left, picture on the right (below the text in a narrow window) */
 .roleCard {
   display: grid;
   gap: 8px;
+}
+
+.roleCardRow {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.roleCardText {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+}
+
+.roleCardPicture,
+.roleCardPictureSmall {
+  flex: none;
+  width: auto;
+  max-width: 40%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px rgb(0 0 0 / 50%));
+  user-select: none;
+}
+
+.roleCardPicture {
+  height: clamp(200px, 30vw, 320px);
+}
+
+.roleCardPictureSmall {
+  height: clamp(150px, 22vw, 220px);
+}
+
+@media (width <= 640px) {
+  .roleCardRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .roleCardPicture,
+  .roleCardPictureSmall {
+    align-self: center;
+    max-width: 100%;
+  }
 }
 
 .roleLabel {

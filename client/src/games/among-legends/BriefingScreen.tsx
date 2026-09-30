@@ -64,7 +64,7 @@ export function BriefingScreen({ view, room, isHost, act }: ScreenProps<'briefin
         même quand tu es sur League of Legends.
       </p>
 
-      <Teams teams={view.teams} room={room} size={view.size} />
+      {view.size === 10 && <Teams teams={view.teams} room={room} size={view.size} />}
       <p className={styles.hint}>
         {notRead.length === 0
           ? 'Tout le monde a lu son rôle.'

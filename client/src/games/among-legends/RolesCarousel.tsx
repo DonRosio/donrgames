@@ -2,16 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
 import type { SettingValue } from '@mini-jeux/shared';
 import { ROLES, ROLE_IDS } from '@mini-jeux/shared/games/among-legends-roles';
-import type { RoleId } from '@mini-jeux/shared/games/among-legends-roles';
+import { pictureOf } from './role-pictures.ts';
 import styles from './among-legends.module.css';
-
-// One picture per role, `assets/roles/<role id>.webp` (sources in `design/`).
-const PICTURES = import.meta.glob<string>('../../assets/roles/*.webp', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-});
-const pictureOf = (id: RoleId): string | undefined => PICTURES[`../../assets/roles/${id}.webp`];
 
 const COUNT = ROLE_IDS.length;
 /** The list is shown three times in a row: the middle copy is the one we rest on. */

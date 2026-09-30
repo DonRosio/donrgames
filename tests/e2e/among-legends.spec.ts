@@ -21,7 +21,10 @@ test('a full game of Among Legends with five players: briefing, vote, statistics
   for (const player of players.slice(1)) await joinRoom(player, code);
   await startGame(alice);
 
-  // Briefing: everyone reads their secret role, the host starts the clock.
+  // Briefing: everyone reads their secret role, the host starts the clock. With one team of five,
+  // there is no team card to show.
+  await expect(alice.page.getByRole('img').first()).toBeVisible();
+  await expect(alice.page.getByRole('heading', { name: 'Ton équipe' })).toHaveCount(0);
   for (const player of players) {
     await player.page.getByRole('button', { name: "J'ai lu mon rôle" }).click();
   }

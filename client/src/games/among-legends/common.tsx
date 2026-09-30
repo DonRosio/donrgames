@@ -4,6 +4,7 @@ import { COMMON_POINTS, ROLES, TEAM_NAMES } from '@mini-jeux/shared/games/among-
 import type { RoleId, Team } from '@mini-jeux/shared/games/among-legends-roles';
 import type { StatsError } from '@mini-jeux/shared/games/among-legends-scoring';
 import type { GameScreenProps } from '../../core/game-host/client-game.ts';
+import { pictureOf } from './role-pictures.ts';
 import styles from './among-legends.module.css';
 
 export type ScreenProps<P extends AmongLegendsView['phase']> = GameScreenProps<
@@ -23,30 +24,43 @@ export function formatClock(ms: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
 }
 
-/** A role with its mission and, unless compact, how it scores. */
+/** A role with its mission and its picture on the right, and, unless compact, how it scores. */
 export function RoleCard({ role, compact = false }: { role: RoleId; compact?: boolean }) {
   const info = ROLES[role];
+  const picture = pictureOf(role);
   return (
     <article className={`card ${styles.roleCard}`}>
-      <p className={styles.roleLabel}>Ton rôle</p>
-      <h2 className={styles.roleName}>{info.name}</h2>
-      <p className={styles.goal}>{info.goal}</p>
-      {!compact && (
-        <>
-          <h3 className={styles.pointsTitle}>Tes points</h3>
-          <ul className={styles.points}>
-            {info.points.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-          <h3 className={styles.pointsTitle}>Pour tout le monde</h3>
-          <ul className={styles.points}>
-            {COMMON_POINTS.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </>
-      )}
+      <div className={styles.roleCardRow}>
+        <div className={styles.roleCardText}>
+          <p className={styles.roleLabel}>Ton rôle</p>
+          <h2 className={styles.roleName}>{info.name}</h2>
+          <p className={styles.goal}>{info.goal}</p>
+          {!compact && (
+            <>
+              <h3 className={styles.pointsTitle}>Tes points</h3>
+              <ul className={styles.points}>
+                {info.points.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+              <h3 className={styles.pointsTitle}>Pour tout le monde</h3>
+              <ul className={styles.points}>
+                {COMMON_POINTS.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+        {picture && (
+          <img
+            className={compact ? styles.roleCardPictureSmall : styles.roleCardPicture}
+            src={picture}
+            alt={info.name}
+            draggable={false}
+          />
+        )}
+      </div>
     </article>
   );
 }
