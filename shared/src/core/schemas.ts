@@ -28,7 +28,10 @@ export const playerTargetSchema = z.strictObject({ playerId: playerIdSchema });
 export const selectGameSchema = z.strictObject({ gameId: gameIdSchema });
 export const setSettingsSchema = z.strictObject({
   settings: z
-    .record(z.string().max(32), z.union([z.number(), z.string().max(64), z.boolean()]))
+    .record(
+      z.string().max(32),
+      z.union([z.number(), z.string().max(64), z.boolean(), z.array(z.string().max(64)).max(32)]),
+    )
     .refine((settings) => Object.keys(settings).length <= 20),
 });
 /** Envelope only: the payload is validated against the action schema of the running game. */

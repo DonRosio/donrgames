@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import type {
   ActionTypeOf,
+  GameInfo,
   GameContract,
   GameErrorOf,
   MediaRef,
@@ -8,6 +9,7 @@ import type {
   PhaseOf,
   PlayerView,
   RoomView,
+  SettingValue,
   UploadKindOf,
   UploadMetaOf,
 } from '@mini-jeux/shared';
@@ -41,6 +43,11 @@ export interface ClientGame<C extends GameContract, V extends { phase: PhaseOf<C
     [P in PhaseOf<C>]: ComponentType<GameScreenProps<C, Extract<V, { phase: P }>>>;
   };
   errorMessages: Record<GameErrorOf<C>, string>;
+  /**
+   * Optional panel shown in the lobby under the game description, to everyone: rules, presentation
+   * of the game… It receives the current settings (e.g. to highlight the options in play).
+   */
+  lobbyPanel?: ComponentType<{ info: GameInfo; settings: Record<string, SettingValue> }>;
   /**
    * Optional wrapper around the screen of every phase. It stays mounted from one phase to the
    * next, so it can keep state across phases (e.g. play a transition when the round changes).

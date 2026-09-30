@@ -9,11 +9,35 @@ export interface GameMeta {
   description: string;
   minPlayers: number;
   maxPlayers: number;
+  /** Only these numbers of players are allowed (e.g. [5, 10]); any count in the bounds otherwise. */
+  playerCounts?: readonly number[];
   /** false: the game consumes its content ("à usage unique" badge, played content tracking). */
   replayable: boolean;
 }
 
-export type SettingValue = number | string | boolean;
+/** "2 à 10 joueurs", or "5 ou 10 joueurs" for games with fixed player counts. */
+export function playerCountLabel(meta: GameMeta): string {
+  const counts = meta.playerCounts;
+  if (!counts || counts.length === 0) return `${meta.minPlayers} à ${meta.maxPlayers} joueurs`;
+  if (counts.length === 1) return `${counts[0]} joueurs`;
+  return `${counts.slice(0, -1).join(', ')} ou ${counts.at(-1)} joueurs`;
+}
+
+export type SettingValue = number | string | boolean | readonly string[];
+
+/** One checkbox of a 'multi' setting. */
+export interface MultiOption {
+  value: string;
+  label: string;
+  /** Always checked, cannot be unchecked. */
+  locked?: boolean;
+  /** Shown greyed out, never checked (e.g. not ready yet). */
+  disabled?: boolean;
+  /** Short note shown next to the option. */
+  note?: string;
+  /** When this option is checked, at least this many options must be checked. */
+  minWhenChecked?: number;
+}
 
 /** Declarative settings: rendered by a generic form in the lobby, validated by the server. */
 export type SettingDef =
@@ -32,7 +56,39 @@ export type SettingDef =
       options: readonly { value: string; label: string }[];
       default: string;
     }
-  | { kind: 'boolean'; label: string; default: boolean };
+  | { kind: 'boolean'; label: string; default: boolean }
+  | {
+      /** Several options to check; the default is every option that is not disabled. */
+      kind: 'multi';
+      label: string;
+      options: readonly MultiOption[];
+      /** Minimum number of checked options. */
+      min: number;
+    };
+
+type MultiDef = Extract<SettingDef, { kind: 'multi' }>;
+
+/** Default value of a 'multi' setting: every option that is not disabled, in option order. */
+export function defaultMulti(def: MultiDef): string[] {
+  return def.options.filter((option) => !option.disabled).map((option) => option.value);
+}
+
+/**
+ * Whether a set of checked options is allowed: known options only, no duplicate, locked ones
+ * included, disabled ones excluded, and enough options checked. Shared by the server (which
+ * enforces it) and the lobby form (which only offers the changes it would accept).
+ */
+export function isValidMulti(def: MultiDef, value: unknown): value is string[] {
+  if (!Array.isArray(value) || new Set(value).size !== value.length) return false;
+  const checked = new Set<unknown>(value);
+  for (const item of value) {
+    const option = def.options.find((candidate) => candidate.value === item);
+    if (!option || option.disabled) return false;
+    if (option.minWhenChecked !== undefined && value.length < option.minWhenChecked) return false;
+  }
+  if (def.options.some((option) => option.locked && !checked.has(option.value))) return false;
+  return value.length >= def.min;
+}
 
 export interface ActionDef {
   payload: z.ZodType;
@@ -84,9 +140,11 @@ type SettingValueOf<D> = D extends { kind: 'int' }
   ? number
   : D extends { kind: 'boolean' }
     ? boolean
-    : D extends { kind: 'choice'; options: readonly { value: infer V }[] }
-      ? V
-      : never;
+    : D extends { kind: 'multi'; options: readonly { value: infer V }[] }
+      ? V[]
+      : D extends { kind: 'choice'; options: readonly { value: infer V }[] }
+        ? V
+        : never;
 
 export type SettingsOf<C extends GameContract> = {
   -readonly [K in keyof C['settings']]: SettingValueOf<C['settings'][K]>;

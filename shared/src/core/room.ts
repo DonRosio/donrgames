@@ -11,7 +11,8 @@ export interface PlayerView {
   role: 'player' | 'waiting';
 }
 
-export type UnavailableReason = 'NOT_ENOUGH_PLAYERS' | 'TOO_MANY_PLAYERS' | 'NO_CONTENT_LEFT';
+export type UnavailableReason =
+  'NOT_ENOUGH_PLAYERS' | 'TOO_MANY_PLAYERS' | 'WRONG_PLAYER_COUNT' | 'NO_CONTENT_LEFT';
 
 export interface GameAvailability {
   id: string;

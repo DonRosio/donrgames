@@ -44,3 +44,63 @@
 .readOnly {
   font-weight: 700;
 }
+
+.multi {
+  display: block;
+}
+
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.count {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: grid;
+  gap: 2px;
+}
+
+.optionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.optionLabel:has(input:disabled) {
+  cursor: default;
+}
+
+.disabled {
+  opacity: 0.5;
+}
+
+.note {
+  padding-left: 30px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}

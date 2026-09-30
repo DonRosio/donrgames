@@ -1,3 +1,4 @@
+import { defaultMulti, isValidMulti } from '@mini-jeux/shared';
 import type { SettingDef, SettingValue } from '@mini-jeux/shared';
 
 /** Content counts of the room, for settings bounded by the content left. */
@@ -21,6 +22,7 @@ export function settingLimits(defs: Defs, counts: ContentCounts | null): Setting
 
 function defaultOf(def: SettingDef, counts: ContentCounts | null): SettingValue {
   if (def.kind === 'int' && def.default === 'contentLeft') return counts?.left ?? 0;
+  if (def.kind === 'multi') return defaultMulti(def);
   return def.default;
 }
 
@@ -72,6 +74,8 @@ function isValid(
       return typeof value === 'boolean';
     case 'choice':
       return def.options.some((option) => option.value === value);
+    case 'multi':
+      return isValidMulti(def, value);
   }
 }
 
@@ -87,7 +91,11 @@ export function patchSettings(
   for (const [key, value] of Object.entries(patch)) {
     const def = Object.hasOwn(defs, key) ? defs[key] : undefined;
     if (!def || !isValid(def, limits[key], value)) return null;
-    next[key] = value as SettingValue;
+    // Checked options are kept in option order, whatever order the client sent.
+    next[key] =
+      def.kind === 'multi'
+        ? def.options.map((o) => o.value).filter((v) => (value as string[]).includes(v))
+        : (value as SettingValue);
   }
   return next;
 }

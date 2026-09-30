@@ -1,0 +1,222 @@
+.screen {
+  display: grid;
+  gap: var(--gap);
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.header {
+  display: grid;
+  gap: 6px;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  background: rgb(36 22 26 / 88%);
+}
+
+.title {
+  font-family: var(--font-title);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+/* Role card */
+.roleCard {
+  display: grid;
+  gap: 8px;
+}
+
+.roleLabel {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.roleName {
+  color: var(--accent-strong);
+  font-family: var(--font-title);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.goal {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.pointsTitle {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.points {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+/* Teams */
+.teams {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--gap);
+}
+
+.team {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.team ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Doubled class: wins over the shared .card border, whatever the stylesheet order. */
+.team.blue {
+  border-top: 4px solid #5aa0ff;
+}
+
+.team.red {
+  border-top: 4px solid #ff6b5a;
+}
+
+.me {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+/* Actions and notices */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mainAction {
+  justify-self: start;
+}
+
+.hostPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.notice {
+  padding: 12px 16px;
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-small);
+  background: rgb(36 22 26 / 88%);
+  font-weight: 600;
+}
+
+.hint {
+  padding: 8px 14px;
+  border-radius: var(--radius-small);
+  background: rgb(36 22 26 / 80%);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Game in progress */
+.clock {
+  justify-self: center;
+  padding: 6px 28px;
+  border-radius: 999px;
+  background: rgb(20 12 14 / 88%);
+  color: var(--accent-strong);
+  font-family: var(--font-mono);
+  font-size: clamp(2.2rem, 7vw, 3.4rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mode.mode {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  text-align: center;
+  border-width: 3px;
+}
+
+.mode.ally {
+  border-color: var(--success);
+}
+
+.mode.foe {
+  border-color: var(--danger);
+}
+
+.modeLabel {
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.modeOrder {
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 800;
+}
+
+.ally .modeOrder {
+  color: var(--success);
+}
+
+.foe .modeOrder {
+  color: var(--danger);
+}
+
+.flash {
+  animation: flash 1s ease-in-out 6;
+}
+
+@keyframes flash {
+  50% {
+    box-shadow: 0 0 0 6px var(--accent-strong);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash {
+    animation: none;
+    box-shadow: 0 0 0 4px var(--accent-strong);
+  }
+}
+
+/* Rules in the lobby */
+.rules {
+  padding: 12px 16px;
+  border: 1px solid rgb(255 232 170 / 24%);
+  border-radius: var(--radius-small);
+  background: rgb(20 12 14 / 50%);
+}
+
+.rules summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rules h4 {
+  margin: 12px 0 4px;
+}
+
+.steps,
+.roleList {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 1.3em;
+}
+
+.outOfGame {
+  opacity: 0.55;
+}

@@ -517,7 +517,8 @@ export class RoomManager {
     for (const room of [...this.#rooms.values()]) {
       const expired =
         now - room.createdAt >= timings.maxRoomAgeMs ||
-        now - room.lastActionAt >= timings.idleRoomTtlMs ||
+        // A running game may legitimately go quiet for long (e.g. players busy in another game).
+        (room.status !== 'playing' && now - room.lastActionAt >= timings.idleRoomTtlMs) ||
         (room.noConnectedSince !== null && now - room.noConnectedSince >= timings.emptyRoomTtlMs);
       if (expired) {
         this.#closeRoom(room, 'expired');
@@ -578,7 +579,7 @@ export class RoomManager {
   // ---------------------------------------------------------------- internals
 
   #availability(room: Room, game: AnyGameDefinition): GameAvailability {
-    const { id, minPlayers, maxPlayers } = contractOf(game).meta;
+    const { id, minPlayers, maxPlayers, playerCounts } = contractOf(game).meta;
     let connected = 0;
     for (const player of room.players.values()) if (player.socketId !== null) connected++;
     const counts = this.#counts(room, game);
@@ -589,7 +590,9 @@ export class RoomManager {
           ? 'NOT_ENOUGH_PLAYERS'
           : connected > maxPlayers
             ? 'TOO_MANY_PLAYERS'
-            : null;
+            : playerCounts && !playerCounts.includes(connected)
+              ? 'WRONG_PLAYER_COUNT'
+              : null;
     return { id, launchable: reason === null, reason, content: counts };
   }
 
@@ -670,6 +673,8 @@ export class RoomManager {
     if (room.runner !== runner) return;
     room.runner = null;
     room.status = 'results';
+    // Idle time is not counted while playing: restart it now, not from the last action.
+    this.#touch(room);
     this.media.deleteRoom(room.id);
     room.results = {
       gameId: contractOf(runner.definition).meta.id,

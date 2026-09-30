@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { playerCountLabel } from '@mini-jeux/shared';
 import type { GameInfo, RoomView, SettingValue } from '@mini-jeux/shared';
 import { clientGames } from '../../games/registry.ts';
 import { errorMessage } from '../session/errors.ts';
@@ -9,6 +10,8 @@ import styles from './GamePanel.module.css';
 const UNAVAILABLE: Record<string, (info: GameInfo) => string> = {
   NOT_ENOUGH_PLAYERS: (info) => `Il faut au moins ${info.meta.minPlayers} joueurs connectés.`,
   TOO_MANY_PLAYERS: (info) => `Ce jeu accepte au plus ${info.meta.maxPlayers} joueurs.`,
+  WRONG_PLAYER_COUNT: (info) =>
+    `Ce jeu se joue à exactement ${playerCountLabel(info.meta)} connectés.`,
   NO_CONTENT_LEFT: () =>
     'Toutes les vidéos ont déjà été jouées dans ce salon. Ajoute-en dans selection.txt et redémarre le serveur.',
 };
@@ -43,7 +46,9 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
   const info = catalog.find((game) => game.meta.id === selected?.id);
   const availability = room.games.find((game) => game.id === selected?.id);
   // A game the server knows but this client version does not (should never happen once deployed).
-  const playable = clientGames.some((game) => game.id === selected?.id);
+  const clientGame = clientGames.find((game) => game.id === selected?.id);
+  const playable = clientGame !== undefined;
+  const LobbyPanel = clientGame?.lobbyPanel;
 
   return (
     <div className={styles.panel}>
@@ -72,6 +77,7 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
               {!info.meta.replayable && <span className={styles.badge}>à usage unique</span>}
             </h3>
             <p className="muted">{info.meta.description}</p>
+            <p className={styles.content}>{playerCountLabel(info.meta)}</p>
             {availability?.content && (
               <p className={styles.content}>
                 {availability.content.left} vidéo{availability.content.left > 1 ? 's' : ''} pas
@@ -79,6 +85,7 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
               </p>
             )}
           </div>
+          {LobbyPanel && <LobbyPanel info={info} settings={selected.settings} />}
           <SettingsForm
             defs={info.settings}
             values={selected.settings}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isValidMulti } from '@mini-jeux/shared';
 import type { SettingDef, SettingValue } from '@mini-jeux/shared';
 import styles from './SettingsForm.module.css';
 
@@ -20,6 +21,18 @@ export function SettingsForm({ defs, values, limits, editable, onChange }: Setti
     <dl className={styles.form}>
       {entries.map(([key, def]) => {
         const id = `setting-${key}`;
+        if (def.kind === 'multi') {
+          return (
+            <MultiField
+              key={key}
+              id={id}
+              def={def}
+              value={(values[key] as readonly string[] | undefined) ?? []}
+              editable={editable}
+              onChange={(next) => onChange({ [key]: next })}
+            />
+          );
+        }
         const value = values[key] ?? def.default;
         return (
           <div key={key} className={styles.field}>
@@ -67,9 +80,70 @@ export function SettingsForm({ defs, values, limits, editable, onChange }: Setti
   );
 }
 
+type MultiDef = Extract<SettingDef, { kind: 'multi' }>;
+
+/**
+ * One checkbox per option. Everyone sees the list; only the host can change it, and only in
+ * ways the server accepts (locked options stay checked, the minimum is kept).
+ */
+function MultiField(props: {
+  id: string;
+  def: MultiDef;
+  value: readonly string[];
+  editable: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const { id, def, value, editable, onChange } = props;
+  const toggled = (option: string) =>
+    value.includes(option) ? value.filter((v) => v !== option) : [...value, option];
+  return (
+    <div className={`${styles.field} ${styles.multi}`}>
+      <fieldset className={styles.fieldset}>
+        <legend className={styles.legend}>
+          {def.label}{' '}
+          <span className={styles.count}>
+            ({value.length} cochés, au moins {def.min})
+          </span>
+        </legend>
+        <ul className={styles.options}>
+          {def.options.map((option) => {
+            const checked = value.includes(option.value);
+            const allowed = isValidMulti(def, toggled(option.value));
+            const noteId = `${id}-${option.value}-note`;
+            return (
+              <li
+                key={option.value}
+                className={option.disabled ? `${styles.option} ${styles.disabled}` : styles.option}
+              >
+                <label className={styles.optionLabel}>
+                  <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={checked}
+                    disabled={!editable || option.locked || option.disabled || !allowed}
+                    aria-describedby={option.note ? noteId : undefined}
+                    onChange={() => onChange(toggled(option.value))}
+                  />
+                  <span>{option.label}</span>
+                </label>
+                {option.note && (
+                  <span id={noteId} className={styles.note}>
+                    {option.note}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
+    </div>
+  );
+}
+
 function displayValue(def: SettingDef, value: SettingValue): string {
   if (def.kind === 'boolean') return value ? 'Oui' : 'Non';
   if (def.kind === 'choice') return def.options.find((o) => o.value === value)?.label ?? '';
+  if (def.kind === 'multi') return '';
   return String(value);
 }
 

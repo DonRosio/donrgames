@@ -5,6 +5,7 @@ import {
   ROOM_CODE_LENGTH,
   normalizeNickname,
   normalizeRoomCode,
+  playerCountLabel,
   validateNickname,
 } from '@mini-jeux/shared';
 import type { GameInfo } from '@mini-jeux/shared';
@@ -163,9 +164,7 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
                   {!game.replayable && <span className={styles.badge}>à usage unique</span>}
                 </h3>
                 <p className="muted">{game.description}</p>
-                <p className={styles.players}>
-                  {game.minPlayers} à {game.maxPlayers} joueurs
-                </p>
+                <p className={styles.players}>{playerCountLabel(game)}</p>
               </li>
             ))}
           </ul>

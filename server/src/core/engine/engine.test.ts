@@ -179,6 +179,39 @@ describe('game definition validation', () => {
     );
   });
 
+  it('checks the allowed player counts and the multi settings', () => {
+    const meta = { ...fixtureGame.contract.meta, playerCounts: [2, 6] };
+    expect(() =>
+      validateGameDefinition({ ...fixtureGame, contract: { ...fixtureGame.contract, meta } }),
+    ).toThrow(/playerCounts/);
+    const withMulti = (options: object[], min: number) => ({
+      ...fixtureGame,
+      contract: {
+        ...fixtureGame.contract,
+        settings: { roles: { kind: 'multi' as const, label: 'Rôles', min, options } },
+      },
+    });
+    expect(() =>
+      validateGameDefinition(
+        withMulti(
+          [
+            { value: 'a', label: 'A' },
+            { value: 'a', label: 'A bis' },
+          ],
+          1,
+        ),
+      ),
+    ).toThrow(/duplicate options/);
+    expect(() => validateGameDefinition(withMulti([{ value: 'a', label: 'A' }], 2))).toThrow(
+      /breaks its own rules/,
+    );
+    expect(() =>
+      validateGameDefinition(
+        withMulti([{ value: 'a', label: 'A', locked: true, disabled: true }], 0),
+      ),
+    ).toThrow(/both locked and disabled/);
+  });
+
   it('detects duplicate ids in the registry', () => {
     expect(() => validateRegistry([fixtureGame, fixtureGame])).toThrow(/registered twice/);
   });
@@ -204,6 +237,30 @@ describe('settings', () => {
     expect(patchSettings(defs, current, { mode: 'medium' })).toBeNull();
     expect(patchSettings(defs, current, { unknown: 1 })).toBeNull();
     expect(patchSettings(defs, current, { toString: 1 })).toBeNull();
+  });
+});
+
+describe('multi settings', () => {
+  const defs = {
+    roles: {
+      kind: 'multi',
+      label: 'Rôles',
+      min: 2,
+      options: [
+        { value: 'a', label: 'A', locked: true },
+        { value: 'b', label: 'B' },
+        { value: 'c', label: 'C' },
+      ],
+    },
+  } as const;
+
+  it('default to every option, and keep a patch in option order', () => {
+    const current = defaultSettings(defs);
+    expect(current).toEqual({ roles: ['a', 'b', 'c'] });
+    expect(patchSettings(defs, current, { roles: ['c', 'a'] })).toEqual({ roles: ['a', 'c'] });
+    expect(patchSettings(defs, current, { roles: ['b', 'c'] })).toBeNull();
+    expect(patchSettings(defs, current, { roles: ['a'] })).toBeNull();
+    expect(patchSettings(defs, current, { roles: 'a' })).toBeNull();
   });
 });
 

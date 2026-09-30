@@ -98,6 +98,35 @@ describe('games in a room', () => {
     expect(errorCode(() => rooms.startGame(host))).toBe('GAME_UNAVAILABLE');
   });
 
+  it('only launches games with an allowed number of players', () => {
+    const meta = { ...fixtureGame.contract.meta, playerCounts: [3] };
+    const three = { ...fixtureGame, contract: { ...fixtureGame.contract, meta } };
+    const r = new RoomManager({
+      clock: scheduler.clock,
+      random: counterRandom(),
+      limits: { maxRooms: 10, maxPlayersPerRoom: 10, timings: DEFAULT_TIMINGS },
+      games: [three],
+      scheduler,
+    });
+    const a = r.createRoom({ nickname: 'Alice' });
+    r.attachSocket(a, 's-a');
+    r.attachSocket(r.joinRoom({ code: a.room.code, nickname: 'Bob' }), 's-b');
+    expect(r.view(a.room, a.player.id).games[0]).toMatchObject({
+      launchable: false,
+      reason: 'WRONG_PLAYER_COUNT',
+    });
+    expect(errorCode(() => r.startGame(a))).toBe('GAME_UNAVAILABLE');
+    r.attachSocket(r.joinRoom({ code: a.room.code, nickname: 'Carol' }), 's-c');
+    expect(r.view(a.room, a.player.id).games[0]).toMatchObject({ launchable: true });
+  });
+
+  it('never closes a room for inactivity while a game is running', () => {
+    rooms.startGame(host);
+    advance(2 * 60 * 60 * SECOND);
+    expect(rooms.getRoom(room().code)).toBe(room());
+    expect(room().status).toBe('playing');
+  });
+
   it('starts a game: only the connected players take part', () => {
     const carol = rooms.joinRoom({ code: room().code, nickname: 'Carol' });
     rooms.startGame(host);

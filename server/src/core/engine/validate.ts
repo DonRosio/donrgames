@@ -1,3 +1,4 @@
+import { defaultMulti, isValidMulti } from '@mini-jeux/shared';
 import type { GameContract } from '@mini-jeux/shared';
 import type { AnyGameDefinition, PhaseDef } from './types.ts';
 
@@ -12,8 +13,10 @@ export function validateGameDefinition(definition: AnyGameDefinition): void {
     throw new Error(`Game "${id}": ${message}`);
   };
   if (!/^[a-z0-9-]{1,32}$/.test(id)) fail('id must be kebab-case (a-z, 0-9, -)');
-  if (contract.meta.minPlayers < 1 || contract.meta.maxPlayers < contract.meta.minPlayers) {
-    fail('invalid player bounds');
+  const { minPlayers, maxPlayers, playerCounts } = contract.meta;
+  if (minPlayers < 1 || maxPlayers < minPlayers) fail('invalid player bounds');
+  if (playerCounts?.some((n) => !Number.isInteger(n) || n < minPlayers || n > maxPlayers)) {
+    fail('playerCounts must be within minPlayers and maxPlayers');
   }
 
   const phases = definition.phases as Record<string, PhaseDef<GameContract, unknown>>;
@@ -62,6 +65,16 @@ export function validateGameDefinition(definition: AnyGameDefinition): void {
     }
     if (setting.kind === 'choice' && !setting.options.some((o) => o.value === setting.default)) {
       fail(`setting "${key}" has a default that is not one of its options`);
+    }
+    if (setting.kind === 'multi') {
+      const values = setting.options.map((o) => o.value);
+      if (new Set(values).size !== values.length) fail(`setting "${key}" has duplicate options`);
+      if (setting.options.some((o) => o.locked && o.disabled)) {
+        fail(`setting "${key}" has an option both locked and disabled`);
+      }
+      if (!isValidMulti(setting, defaultMulti(setting))) {
+        fail(`setting "${key}": its default (every enabled option) breaks its own rules`);
+      }
     }
   }
 }

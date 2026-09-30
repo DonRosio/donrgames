@@ -132,6 +132,7 @@ export interface GameMeta {
   description: string; // description affichée (FR)
   minPlayers: number;
   maxPlayers: number;
+  playerCounts?: readonly number[]; // seuls ces nombres de joueurs sont permis (ex. [5, 10])
   replayable: boolean; // false → badge « à usage unique » + suivi du contenu joué
 }
 
@@ -147,7 +148,12 @@ export type SettingDef =
       default: number | 'contentLeft';
     }
   | { kind: 'choice'; label: string; options: { value: string; label: string }[]; default: string }
-  | { kind: 'boolean'; label: string; default: boolean };
+  | { kind: 'boolean'; label: string; default: boolean }
+  // Cases à cocher ; valeur : liste des options cochées, dans l'ordre des options. Par défaut,
+  // toutes les options non grisées. Option : { value, label, locked?, disabled?, note?,
+  // minWhenChecked? } (verrouillée = toujours cochée ; grisée = jamais ; minWhenChecked = si
+  // cochée, il faut au moins N options). isValidMulti() est partagé par le serveur et le formulaire.
+  | { kind: 'multi'; label: string; options: MultiOption[]; min: number };
 
 export interface GameContract {
   meta: GameMeta;
@@ -327,7 +333,7 @@ interface Player {
 - **Reconnexion** : même jeton → même joueur ; `room:state` et `game:view` sont renvoyés en entier.
 - **Déconnexion** : détectée en 20 s au plus (heartbeat Socket.IO réglé à 10 s + 10 s). En partie, le joueur reste « attendu » 60 s, puis le jeu est prévenu et l'hôte est transféré si c'était lui. Au salon, un joueur déconnecté depuis 5 min est retiré.
 - **Pseudo** : normalisé (NFC, espaces rognés et fusionnés), 2 à 16 caractères (graphèmes). Autorisés : lettres de toutes langues, chiffres, espace, `- _ . ' !` et emojis ; au plus 4 signes combinants par caractère (contre le texte « Zalgo »). Unique dans le salon (sans tenir compte de la casse). Toujours affiché comme du texte React.
-- **Fermeture** : par l'hôte ; au départ du dernier joueur ; après 10 min sans joueur connecté ; après 60 min sans aucune action ; au bout de 12 h dans tous les cas. Toute fermeture supprime les médias du salon.
+- **Fermeture** : par l'hôte ; au départ du dernier joueur ; après 10 min sans joueur connecté ; après 60 min sans aucune action, **sauf pendant une partie** (Among Legends : une partie de League of Legends se joue hors du site) ; au bout de 12 h dans tous les cas. Toute fermeture supprime les médias du salon.
 - **Limites** : 10 joueurs par salon, 100 salons actifs (configurables).
 
 ### 4.2 Moteur de jeux
@@ -789,6 +795,23 @@ Pour une nouvelle soirée, il suffit d'ajouter de nouveaux fichiers et leurs lig
   - il ajouterait des publicités, et une vidéo supprimée casserait la partie.
 - **En production**, le dossier `content/` se copie sur le serveur (rsync), sans passer par git (étape 8).
 
+## 7 bis. Among Legends (`among-legends`)
+
+Jeu de rôles secrets autour d'une vraie partie de League of Legends, jouée hors du site. Règles complètes et barème : `shared/src/games/among-legends-roles.ts` (données partagées, sans zod, importées par le client).
+
+- **Joueurs** : exactement 5 (une équipe) ou 10 (deux équipes de 5 qui s'affrontent) : `playerCounts: [5, 10]`.
+- **Réglage** : `roles`, liste à cocher. Imposteur verrouillé, Droïde grisé (en développement), au moins 5 rôles, au moins 6 avec le Caméléon.
+- **Tirage** (serveur) : par équipe, l'Imposteur plus 4 autres rôles cochés, tirés au hasard, jamais de doublon dans une équipe ; les deux équipes tirent indépendamment. Chaque joueur ne voit **que son propre rôle** ; les équipes sont publiques.
+- **Double Face** : mode de départ au hasard, bascule toutes les 7 min de jeu. **Caméléon** : à 15 min, reçoit un rôle coché absent de son équipe (s'il devient Double Face, il suit le même rythme).
+- **Alarmes** : déclenchées par des minuteries **serveur** (`ctx.schedule`, calées sur `startedAt`), car le navigateur ralentit les minuteries des onglets en arrière-plan. La vue du joueur porte `alert: { seq, kind }` ; le client sonne quand `seq` augmente (pas au rechargement de la page). Son généré par Web Audio (`client/src/core/media/alarm.ts`), débloqué par le clic « J'ai lu mon rôle ».
+
+```
+ teams (10 joueurs : choix d'équipe, validé par l'hôte ; 5 joueurs : passée aussitôt)
+   → briefing (tirage, rôle secret, « J'ai lu mon rôle », test de l'alarme)
+   → playing (« La partie a commencé » de l'hôte : chrono, alarmes)
+   → [étape 10 : stats → votes → résultats] ; pour l'instant « La partie est terminée » finit à 0 point
+```
+
 ## 8. Sécurité : exigence → mécanisme
 
 | Exigence du cahier des charges                                 | Mécanisme                                                                                                                                                      |
@@ -834,15 +857,18 @@ Revue complète et risques restants : [revue-securite.md](revue-securite.md).
 
 ## 10. Découpage par étapes
 
-| Étape              | Contenu                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2. Socle           | monorepo et outillage (TS, ESLint, Prettier, Vitest) ; config ; Fastify + en-têtes de sécurité ; Socket.IO + authentification ; salons (créer, rejoindre, quitter, exclure, transférer l'hôte, reconnexion, expiration) ; limitation de débit ; horloge ; accueil (liste des jeux du registre, pour l'instant vide), `/join/:code`, salon d'attente ; bandeau de connexion ; tests ; HTTPS local pour tester depuis un autre PC                                         |
-| 3. Plugins         | moteur (`defineGame`, `GameRunner`, contexte, minuteries, banc de test) validé par le jeu fictif ; côté salon : choix du jeu, réglages génériques, lancement, abandon, « Passer à la suite », écran de résultats ; registres ; `Scoreboard`, `RankingScreen`, `Countdown` ; galerie des composants (dev). Sans jeu réel, le test manuel se limite à la galerie ; le lancement d'une partie est couvert par les tests d'intégration, puis testé à la main dès l'étape 4. |
-| 4. Doublage (1)    | bibliothèque de contenu (`selection.txt`, en-têtes MP4) + `npm run content:check` ; `MediaStore` + envoi + signatures ; `SyncedVideoPlayer`, « Activer le son » ; `AudioRecorder`, `LevelMeter` ; phases `loading` → `recording` ; tests                                                                                                                                                                                                                                |
-| 5. Doublage (2)    | présentation synchronisée (`takeLoading`, `takePlaying`) ; lecture des prises et règles d'accès ; `VotePanel`, `VoteReveal` ; règles de vote ; tests                                                                                                                                                                                                                                                                                                                    |
-| 6. Doublage (3)    | enchaînement des manches, classements intermédiaires et final, « Terminer la partie » ; vérifications finales ; suppression des prises en fin de manche ; tests                                                                                                                                                                                                                                                                                                         |
-| 7. Sécurité et E2E | passe sécurité complète, tests Playwright multi-joueurs, corrections, rapport des risques restants                                                                                                                                                                                                                                                                                                                                                                      |
-| 8. Déploiement     | **[docs/deploiement.md](deploiement.md)** : VPS Debian/Ubuntu, systemd (`--user`), Caddy (HTTPS automatique), déploiement par `git push` (dépôt bare + hook `post-receive`, pas de dépôt GitHub), copie du contenu par `rsync`                                                                                                                                                                                                                                          |
+| Étape                 | Contenu                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2. Socle              | monorepo et outillage (TS, ESLint, Prettier, Vitest) ; config ; Fastify + en-têtes de sécurité ; Socket.IO + authentification ; salons (créer, rejoindre, quitter, exclure, transférer l'hôte, reconnexion, expiration) ; limitation de débit ; horloge ; accueil (liste des jeux du registre, pour l'instant vide), `/join/:code`, salon d'attente ; bandeau de connexion ; tests ; HTTPS local pour tester depuis un autre PC                                         |
+| 3. Plugins            | moteur (`defineGame`, `GameRunner`, contexte, minuteries, banc de test) validé par le jeu fictif ; côté salon : choix du jeu, réglages génériques, lancement, abandon, « Passer à la suite », écran de résultats ; registres ; `Scoreboard`, `RankingScreen`, `Countdown` ; galerie des composants (dev). Sans jeu réel, le test manuel se limite à la galerie ; le lancement d'une partie est couvert par les tests d'intégration, puis testé à la main dès l'étape 4. |
+| 4. Doublage (1)       | bibliothèque de contenu (`selection.txt`, en-têtes MP4) + `npm run content:check` ; `MediaStore` + envoi + signatures ; `SyncedVideoPlayer`, « Activer le son » ; `AudioRecorder`, `LevelMeter` ; phases `loading` → `recording` ; tests                                                                                                                                                                                                                                |
+| 5. Doublage (2)       | présentation synchronisée (`takeLoading`, `takePlaying`) ; lecture des prises et règles d'accès ; `VotePanel`, `VoteReveal` ; règles de vote ; tests                                                                                                                                                                                                                                                                                                                    |
+| 6. Doublage (3)       | enchaînement des manches, classements intermédiaires et final, « Terminer la partie » ; vérifications finales ; suppression des prises en fin de manche ; tests                                                                                                                                                                                                                                                                                                         |
+| 7. Sécurité et E2E    | passe sécurité complète, tests Playwright multi-joueurs, corrections, rapport des risques restants                                                                                                                                                                                                                                                                                                                                                                      |
+| 9. Among Legends (1)  | socle : réglage `multi`, `playerCounts`, `lobbyPanel`, pas d'expiration par inactivité pendant une partie, alarme `playAlarm()` ; jeu : équipes, tirage des rôles, briefing, partie en cours avec les alarmes (Double Face, Caméléon), panneau de règles ; tests                                                                                                                                                                                                        |
+| 10. Among Legends (2) | formulaire de fin de partie, votes (rôle de chaque autre joueur), calcul des points, écran de résultats, Droïde plus tard ; tests et bout en bout                                                                                                                                                                                                                                                                                                                       |
+| 11. Among Legends (3) | design : carrousel des rôles, cartes, sons (contenu fourni par l'utilisateur)                                                                                                                                                                                                                                                                                                                                                                                           |
+| 8. Déploiement        | **[docs/deploiement.md](deploiement.md)** : VPS Debian/Ubuntu, systemd (`--user`), Caddy (HTTPS automatique), déploiement par `git push` (dépôt bare + hook `post-receive`, pas de dépôt GitHub), copie du contenu par `rsync`                                                                                                                                                                                                                                          |
 
 ## 11. Risques et points d'attention
 
