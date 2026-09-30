@@ -195,6 +195,7 @@
 /* Lobby: rules and roles carousel, full width under the two columns */
 .lobbyExtras {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--gap);
 }
 
@@ -224,39 +225,44 @@
 
 .carousel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
 }
 
-.carouselHeader {
+.carouselBody {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
-.carouselButtons {
-  display: flex;
-  gap: 8px;
+.arrow {
+  flex: none;
+  width: 44px;
+  padding: 0;
+  font-size: 1.3rem;
 }
 
+/* One role per screen: each tile is as wide as the card. */
 .track {
   display: flex;
+  flex: 1;
+  min-width: 0;
   gap: 16px;
   margin: 0;
-  padding: 4px 2px 12px;
+  padding: 4px 0 12px;
   overflow-x: auto;
   list-style: none;
-  scroll-snap-type: x proximity;
+  scroll-snap-type: x mandatory;
   scrollbar-color: var(--border) transparent;
 }
 
 .roleTile {
   display: grid;
-  flex: 0 0 min(300px, 78%);
+  flex: 0 0 100%;
   align-content: start;
   gap: 8px;
-  padding: 16px;
+  padding: 16px 20px;
   border: 1px solid rgb(255 232 170 / 24%);
   border-radius: var(--radius-small);
   background: rgb(20 12 14 / 60%);

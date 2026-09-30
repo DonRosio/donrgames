@@ -158,9 +158,7 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
             onClick={() => void create()}
             disabled={busy !== null || !gameId}
           >
-            {busy === 'create'
-              ? 'Création…'
-              : `Créer une partie de ${games?.find((g) => g.meta.id === gameId)?.meta.name ?? '…'}`}
+            {busy === 'create' ? 'Création…' : 'Créer une partie'}
           </button>
         </section>
 
