@@ -192,12 +192,18 @@
   }
 }
 
-/* Rules in the lobby */
+/* Lobby: rules and roles carousel, full width under the two columns */
+.lobbyExtras {
+  display: grid;
+  gap: var(--gap);
+}
+
 .rules {
-  padding: 12px 16px;
+  padding: 12px 18px;
   border: 1px solid rgb(255 232 170 / 24%);
-  border-radius: var(--radius-small);
-  background: rgb(20 12 14 / 50%);
+  border-radius: var(--radius);
+  background: rgb(36 22 26 / 88%);
+  box-shadow: var(--shadow-card);
 }
 
 .rules summary {
@@ -209,12 +215,83 @@
   margin: 12px 0 4px;
 }
 
-.steps,
-.roleList {
+.steps {
   display: grid;
   gap: 4px;
   margin: 8px 0 0;
   padding-left: 1.3em;
+}
+
+.carousel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.carouselHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.carouselButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.track {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 4px 2px 12px;
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x proximity;
+  scrollbar-color: var(--border) transparent;
+}
+
+.roleTile {
+  display: grid;
+  flex: 0 0 min(300px, 78%);
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgb(255 232 170 / 24%);
+  border-radius: var(--radius-small);
+  background: rgb(20 12 14 / 60%);
+  scroll-snap-align: start;
+}
+
+.tileName {
+  margin: 0;
+  color: var(--accent-strong);
+  font-family: var(--font-title);
+  font-size: 1.3rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.tag {
+  justify-self: start;
+  padding: 1px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.tileGoal {
+  font-weight: 600;
+}
+
+.tilePointsTitle {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .outOfGame {

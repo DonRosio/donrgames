@@ -22,7 +22,26 @@ interface GamePanelProps {
   session: Session;
 }
 
-/** Lobby part where the host chooses the game, sets it up and launches it. */
+/** What the lobby needs to know about the game of the room. */
+function gameOf(room: RoomView, catalog: GameInfo[] | null) {
+  const selected = room.selectedGame;
+  const info = catalog?.find((game) => game.meta.id === selected?.id);
+  const availability = room.games.find((game) => game.id === selected?.id);
+  const clientGame = clientGames.find((game) => game.id === selected?.id);
+  return { selected, info, availability, clientGame };
+}
+
+/** Title of the lobby card: the game name when the game presents itself elsewhere, else "Jeu". */
+export function gameCardTitle(room: RoomView, catalog: GameInfo[] | null): string {
+  const { info, clientGame } = gameOf(room, catalog);
+  return clientGame?.lobbyPanel && info ? info.meta.name : 'Jeu';
+}
+
+/**
+ * Lobby card of the game of the room (chosen when the room was created): its settings and the
+ * launch button, for the host. A game with a `lobbyPanel` shows its description in that panel,
+ * so its card is limited to the settings.
+ */
 export function GamePanel({ room, catalog, session }: GamePanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -42,50 +61,31 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
     }
   };
 
-  const selected = room.selectedGame;
-  const info = catalog.find((game) => game.meta.id === selected?.id);
-  const availability = room.games.find((game) => game.id === selected?.id);
+  const { selected, info, availability, clientGame } = gameOf(room, catalog);
   // A game the server knows but this client version does not (should never happen once deployed).
-  const clientGame = clientGames.find((game) => game.id === selected?.id);
   const playable = clientGame !== undefined;
-  const LobbyPanel = clientGame?.lobbyPanel;
+  const compact = clientGame?.lobbyPanel !== undefined;
 
   return (
     <div className={styles.panel}>
-      {isHost && catalog.length > 1 && (
-        <div className={styles.choices} role="radiogroup" aria-label="Choix du jeu">
-          {catalog.map(({ meta }) => (
-            <button
-              key={meta.id}
-              type="button"
-              role="radio"
-              aria-checked={meta.id === selected?.id}
-              className={meta.id === selected?.id ? `btn ${styles.chosen}` : 'btn'}
-              onClick={() => void run(() => session.selectGame(meta.id))}
-            >
-              {meta.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       {info && selected && (
         <>
-          <div>
-            <h3 className={styles.name}>
-              {info.meta.name}
-              {!info.meta.replayable && <span className={styles.badge}>à usage unique</span>}
-            </h3>
-            <p className="muted">{info.meta.description}</p>
-            <p className={styles.content}>{playerCountLabel(info.meta)}</p>
-            {availability?.content && (
-              <p className={styles.content}>
-                {availability.content.left} vidéo{availability.content.left > 1 ? 's' : ''} pas
-                encore jouée{availability.content.left > 1 ? 's' : ''} dans ce salon
-              </p>
-            )}
-          </div>
-          {LobbyPanel && <LobbyPanel info={info} settings={selected.settings} />}
+          {!compact && (
+            <div>
+              <h3 className={styles.name}>
+                {info.meta.name}
+                {!info.meta.replayable && <span className={styles.badge}>à usage unique</span>}
+              </h3>
+              <p className="muted">{info.meta.description}</p>
+              <p className={styles.content}>{playerCountLabel(info.meta)}</p>
+              {availability?.content && (
+                <p className={styles.content}>
+                  {availability.content.left} vidéo{availability.content.left > 1 ? 's' : ''} pas
+                  encore jouée{availability.content.left > 1 ? 's' : ''} dans ce salon
+                </p>
+              )}
+            </div>
+          )}
           <SettingsForm
             defs={info.settings}
             values={selected.settings}
@@ -128,4 +128,12 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
       )}
     </div>
   );
+}
+
+/** Full-width area under the lobby columns, provided by the game (rules, roles…). */
+export function GameExtras({ room, catalog }: Pick<GamePanelProps, 'room' | 'catalog'>) {
+  const { selected, info, clientGame } = gameOf(room, catalog);
+  const Panel = clientGame?.lobbyPanel;
+  if (!Panel || !info || !selected) return null;
+  return <Panel info={info} settings={selected.settings} />;
 }

@@ -44,8 +44,10 @@ export interface ClientGame<C extends GameContract, V extends { phase: PhaseOf<C
   };
   errorMessages: Record<GameErrorOf<C>, string>;
   /**
-   * Optional panel shown in the lobby under the game description, to everyone: rules, presentation
-   * of the game… It receives the current settings (e.g. to highlight the options in play).
+   * Optional full-width area shown to everyone under the lobby columns (players | game settings):
+   * rules, presentation of the roles… It receives the current settings. A game that provides it
+   * presents itself there, so its lobby card only holds the settings and the launch button, under
+   * the name of the game.
    */
   lobbyPanel?: ComponentType<{ info: GameInfo; settings: Record<string, SettingValue> }>;
   /**

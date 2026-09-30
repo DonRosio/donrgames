@@ -19,6 +19,7 @@ import styles from './HomePage.module.css';
 export function HomePage({ joinCode }: { joinCode: string | null }) {
   const [flash] = useState(takeFlash);
   const [games, setGames] = useState<GameInfo[] | null>(null);
+  const [gameId, setGameId] = useState<string | null>(null);
   const [nickname, setNickname] = useState(nicknameStore.load);
   const [code, setCode] = useState(joinCode ?? '');
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
@@ -26,7 +27,13 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
 
   useEffect(() => {
     document.title = 'Mini-jeux entre amis';
-    api.games().then(setGames, () => setGames([]));
+    api.games().then(
+      (list) => {
+        setGames(list);
+        setGameId((current) => current ?? list[0]?.meta.id ?? null);
+      },
+      () => setGames([]),
+    );
   }, []);
 
   /** Checks the nickname locally for immediate feedback; the server checks it again. */
@@ -49,10 +56,10 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
   const create = async () => {
     setError(null);
     const name = checkedNickname();
-    if (!name) return;
+    if (!name || !gameId) return;
     setBusy('create');
     try {
-      enterRoom(await api.createRoom({ nickname: name }), name);
+      enterRoom(await api.createRoom({ nickname: name, gameId }), name);
     } catch (failure) {
       setError(errorMessage(failure));
       setBusy(null);
@@ -87,7 +94,8 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
       <header className={styles.hero}>
         <h1>Mini-jeux entre amis</h1>
         <p className="muted">
-          Chacun sur son PC, en même temps. Crée une partie, partage le code, et c'est parti.
+          Chacun sur son PC, en même temps. Choisis un jeu, crée une partie, partage le code, et
+          c'est parti.
         </p>
       </header>
 
@@ -110,22 +118,54 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
         />
       </section>
 
+      <section className={styles.games} aria-labelledby="games-title">
+        <h2 id="games-title">1. Choisis un jeu</h2>
+        {games === null && <p className="muted">Chargement…</p>}
+        {games?.length === 0 && <p className="muted">Aucun jeu disponible pour l'instant.</p>}
+        {games && games.length > 0 && (
+          <div className={styles.gameList} role="radiogroup" aria-labelledby="games-title">
+            {games.map(({ meta: game }) => (
+              <button
+                key={game.id}
+                type="button"
+                role="radio"
+                aria-checked={game.id === gameId}
+                className={`card ${styles.gameCard} ${game.id === gameId ? styles.chosen : ''}`}
+                onClick={() => setGameId(game.id)}
+              >
+                <span className={styles.gameName}>
+                  {game.name}
+                  {!game.replayable && <span className={styles.badge}>à usage unique</span>}
+                </span>
+                <span className="muted">{game.description}</span>
+                <span className={styles.players}>{playerCountLabel(game)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <h2 className={styles.step}>2. Crée une partie ou rejoins-en une</h2>
       <div className={styles.actions}>
         <section className="card">
-          <h2>Créer une partie</h2>
-          <p className="muted">Tu seras l'hôte : tu choisis les jeux et tu lances les parties.</p>
+          <h3>Créer une partie</h3>
+          <p className="muted">
+            Tu seras l'hôte : tu règles la partie et tu la lances. Un salon = un jeu.
+          </p>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => void create()}
-            disabled={busy !== null}
+            disabled={busy !== null || !gameId}
           >
-            {busy === 'create' ? 'Création…' : 'Créer une partie'}
+            {busy === 'create'
+              ? 'Création…'
+              : `Créer une partie de ${games?.find((g) => g.meta.id === gameId)?.meta.name ?? '…'}`}
           </button>
         </section>
 
         <form className={`card ${joinCode ? styles.highlight : ''}`} onSubmit={(e) => void join(e)}>
-          <h2>Rejoindre</h2>
+          <h3>Rejoindre</h3>
           <label htmlFor="code" className="visually-hidden">
             Code de la partie
           </label>
@@ -150,26 +190,6 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
           {error}
         </p>
       )}
-
-      <section className={styles.games}>
-        <h2>Jeux disponibles</h2>
-        {games === null && <p className="muted">Chargement…</p>}
-        {games?.length === 0 && <p className="muted">Aucun jeu disponible pour l'instant.</p>}
-        {games && games.length > 0 && (
-          <ul className={styles.gameList}>
-            {games.map(({ meta: game }) => (
-              <li key={game.id} className="card">
-                <h3>
-                  {game.name}
-                  {!game.replayable && <span className={styles.badge}>à usage unique</span>}
-                </h3>
-                <p className="muted">{game.description}</p>
-                <p className={styles.players}>{playerCountLabel(game)}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
       <footer className={styles.footer}>
         <p>Aucun compte. Tes enregistrements sont supprimés à la fin de la partie.</p>

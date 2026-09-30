@@ -12,6 +12,8 @@ const nicknameInputSchema = z.string().max(NICKNAME_MAX_INPUT_LENGTH);
 
 export const createRoomBodySchema = z.strictObject({
   nickname: nicknameInputSchema,
+  /** Game of the room, fixed for its whole life; the first registered game when omitted. */
+  gameId: gameIdSchema.optional(),
 });
 
 export const joinRoomBodySchema = z.strictObject({
@@ -25,7 +27,6 @@ export const emptyPayloadSchema = z.strictObject({});
 export const clockPingSchema = z.strictObject({ t0: z.number() });
 export const playerTargetSchema = z.strictObject({ playerId: playerIdSchema });
 
-export const selectGameSchema = z.strictObject({ gameId: gameIdSchema });
 export const setSettingsSchema = z.strictObject({
   settings: z
     .record(

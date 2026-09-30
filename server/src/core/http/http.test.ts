@@ -39,6 +39,35 @@ describe('HTTP API', () => {
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
 
+  it('creates a room for the chosen game, and refuses an unknown one', async () => {
+    const chosen = await built.app.inject({
+      method: 'POST',
+      url: '/api/rooms',
+      payload: { nickname: 'Léa', gameId: 'among-legends' },
+    });
+    expect(chosen.statusCode).toBe(201);
+    const { code } = chosen.json();
+    expect(built.rooms.getRoom(code)?.selectedGame).toBe('among-legends');
+
+    const unknown = await create('Tom');
+    expect(unknown.statusCode).toBe(201);
+    expect(built.rooms.getRoom(unknown.json().code)?.selectedGame).toBe('dubbing');
+
+    const missing = await built.app.inject({
+      method: 'POST',
+      url: '/api/rooms',
+      payload: { nickname: 'Zoé', gameId: 'nope' },
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toEqual({ error: 'GAME_NOT_FOUND' });
+    const malformed = await built.app.inject({
+      method: 'POST',
+      url: '/api/rooms',
+      payload: { nickname: 'Zoé', gameId: '../x' },
+    });
+    expect(malformed.statusCode).toBe(400);
+  });
+
   it('joins with a case-insensitive code', async () => {
     const { code } = (await create('Léa')).json();
     const response = await join(` ${code.toLowerCase()} `);

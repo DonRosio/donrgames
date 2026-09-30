@@ -193,18 +193,20 @@ export class RoomManager {
 
   // ---------------------------------------------------------------- rooms and players
 
-  createRoom(input: { nickname: string }): NewSession {
+  /** A room plays one game, chosen here for good (the first registered game by default). */
+  createRoom(input: { nickname: string; gameId?: string }): NewSession {
     if (this.#rooms.size >= this.#limits.maxRooms) throw new DomainError('TOO_MANY_ROOMS');
     const nickname = checkNickname(input.nickname);
+    const game = input.gameId ? this.#games.get(input.gameId) : this.#games.values().next().value;
+    if (input.gameId && !game) throw new DomainError('GAME_NOT_FOUND');
     const now = this.#clock.now();
-    const firstGame = this.#games.values().next().value;
     const room: Room = {
       id: this.#random.id(6),
       code: this.#uniqueCode(),
       hostId: '',
       status: 'lobby',
       players: new Map(),
-      selectedGame: firstGame ? contractOf(firstGame).meta.id : null,
+      selectedGame: game ? contractOf(game).meta.id : null,
       settings: {},
       settingsTouched: new Set(),
       runner: null,
@@ -309,17 +311,6 @@ export class RoomManager {
   }
 
   // ---------------------------------------------------------------- games
-
-  selectGame(session: Session, gameId: string): void {
-    const { room } = this.#hostInLobby(session);
-    const game = this.#games.get(gameId);
-    if (!game) throw new DomainError('GAME_NOT_FOUND');
-    room.selectedGame = gameId;
-    room.settings = {};
-    room.settingsTouched = new Set();
-    this.#touch(room);
-    this.#events.roomChanged(room);
-  }
 
   setSettings(session: Session, patch: Record<string, unknown>): void {
     const { room } = this.#hostInLobby(session);

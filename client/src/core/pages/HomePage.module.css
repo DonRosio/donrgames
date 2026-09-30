@@ -70,28 +70,64 @@
 .games {
   display: grid;
   gap: 12px;
-  margin-top: 16px;
+}
+
+.step {
+  margin-top: 4px;
+  padding: 4px 14px;
+  border-radius: var(--radius-small);
+  background: rgb(36 22 26 / 80%);
+  justify-self: start;
+  font-size: 1.1rem;
+}
+
+.games h2 {
+  padding: 4px 14px;
+  border-radius: var(--radius-small);
+  background: rgb(36 22 26 / 80%);
+  justify-self: start;
+  font-size: 1.1rem;
 }
 
 .gameList {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--gap);
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.gameList h3 {
-  font-family: var(--font-title);
-  font-size: 1.5rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
+/* A selectable game card. */
+.gameCard {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.12s,
+    border-color 0.12s;
+}
+
+.gameCard:hover {
+  transform: translateY(-2px);
+}
+
+.gameCard.chosen {
+  border-color: var(--accent-strong);
+  box-shadow:
+    0 0 0 2px var(--accent-strong),
+    var(--shadow-card);
+}
+
+.gameName {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
 }
 
 .badge {

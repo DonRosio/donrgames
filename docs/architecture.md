@@ -235,7 +235,6 @@ Client → serveur. Chaque événement reçoit un accusé `Ack = { ok: true, dat
 | `clock:ping`                      | `{ t0 }` → ack `{ t0, server }` | tous                                                     |
 | `room:leave`                      | —                               | tous                                                     |
 | `room:kick` / `room:transferHost` | `{ playerId }`                  | hôte                                                     |
-| `room:selectGame`                 | `{ gameId }`                    | hôte, au salon                                           |
 | `room:setSettings`                | `{ settings }`                  | hôte, au salon                                           |
 | `room:startGame`                  | —                               | hôte, au salon                                           |
 | `room:close`                      | —                               | hôte                                                     |
@@ -283,16 +282,16 @@ export interface RoomView {
 
 ### 3.3 API HTTP
 
-| Route                                 | Auth   | Rôle                                                                                    |
-| ------------------------------------- | ------ | --------------------------------------------------------------------------------------- |
-| `GET /api/health`                     | —      | supervision                                                                             |
-| `GET /api/games`                      | —      | métadonnées et réglages des jeux (accueil, salon)                                       |
-| `POST /api/rooms`                     | —      | `{ nickname }` → `{ code, token }` ; l'appelant devient hôte                            |
-| `POST /api/rooms/join`                | —      | `{ code, nickname }` → `{ code, token }` ; le code est dans le corps, jamais dans l'URL |
-| `POST /api/uploads/:kind`             | Bearer | corps binaire + en-tête `X-Upload-Meta` (JSON) → confié au jeu en cours                 |
-| `GET /api/media/:mediaId`             | Bearer | prise privée, si le jeu l'autorise à cet instant                                        |
-| `GET /api/content/:gameId/:contentId` | Bearer | vidéo, si le jeu l'expose à cet instant                                                 |
-| `GET /*`                              | —      | client compilé (prod) ; `index.html` pour les routes de l'application                   |
+| Route                                 | Auth   | Rôle                                                                                                                                                                |
+| ------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/health`                     | —      | supervision                                                                                                                                                         |
+| `GET /api/games`                      | —      | métadonnées et réglages des jeux (accueil, salon)                                                                                                                   |
+| `POST /api/rooms`                     | —      | `{ nickname, gameId? }` → `{ code, token }` ; l'appelant devient hôte ; **un salon = un jeu**, choisi ici pour toute sa vie (le premier jeu du registre par défaut) |
+| `POST /api/rooms/join`                | —      | `{ code, nickname }` → `{ code, token }` ; le code est dans le corps, jamais dans l'URL                                                                             |
+| `POST /api/uploads/:kind`             | Bearer | corps binaire + en-tête `X-Upload-Meta` (JSON) → confié au jeu en cours                                                                                             |
+| `GET /api/media/:mediaId`             | Bearer | prise privée, si le jeu l'autorise à cet instant                                                                                                                    |
+| `GET /api/content/:gameId/:contentId` | Bearer | vidéo, si le jeu l'expose à cet instant                                                                                                                             |
+| `GET /*`                              | —      | client compilé (prod) ; `index.html` pour les routes de l'application                                                                                               |
 
 ### 3.4 Codes d'erreur
 
@@ -491,13 +490,13 @@ Aides communes : `Barrier` (qui a fini, complet par rapport aux joueurs attendus
 
 ### 5.2 Routes
 
-| Route         | Contenu                                                                                                                                   |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`           | accueil : présentation, jeux du registre (badge « à usage unique »), « Créer une partie », « Rejoindre », mention sur les enregistrements |
-| `/join/:code` | accueil avec le code prérempli (converti en majuscules)                                                                                   |
-| `/room/:code` | salon, partie ou résultats. Sans jeton → redirection vers `/join/:code`                                                                   |
+| Route         | Contenu                                                                                                                                |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`           | accueil : pseudo, **choix du jeu** (cartes sélectionnables, badge « à usage unique »), puis « Créer une partie de … » ou « Rejoindre » |
+| `/join/:code` | accueil avec le code prérempli (converti en majuscules)                                                                                |
+| `/room/:code` | salon, partie ou résultats. Sans jeton → redirection vers `/join/:code`                                                                |
 
-Dans le salon : code en grand, bouton « Copier le lien », liste des joueurs avec leur état, choix du jeu et des réglages pour l'hôte (avec le nombre de vidéos restantes).
+Dans le salon : code en grand, bouton « Copier le lien », puis deux colonnes (joueurs | carte du jeu avec ses réglages et « Lancer la partie », pour l'hôte), puis la zone pleine largeur du jeu s'il en fournit une (`lobbyPanel` : Among Legends y met « Règles du jeu » repliable et le carrousel des rôles). Le jeu du salon ne change pas : pour jouer à un autre jeu, on crée un autre salon.
 
 ### 5.3 Son et lecture automatique
 
@@ -597,7 +596,7 @@ Reconnexion : Socket.IO se reconnecte seul (ou la page est rechargée) avec le m
 ### 6.2 Du salon à la partie, et retour
 
 ```
-Hôte : room:selectGame → room:setSettings → room:startGame
+Création du salon avec le jeu choisi (`POST /api/rooms` avec `gameId`) ; hôte : room:setSettings → room:startGame
 Serveur : vérifie hôte, statut lobby, min ≤ joueurs ≤ max, contenu restant
   → GameRunner(définition, participants = joueurs présents) → setup → enter(initialPhase)
   → room:state {status: 'playing'} + game:view à chacun

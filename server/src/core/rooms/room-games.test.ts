@@ -79,9 +79,17 @@ describe('games in a room', () => {
     });
   });
 
-  it('lets only the host choose the game and its settings, in the lobby', () => {
+  it('plays the game chosen when the room was created, for good', () => {
+    expect(errorCode(() => rooms.createRoom({ nickname: 'Zoé', gameId: 'nope' }))).toBe(
+      'GAME_NOT_FOUND',
+    );
+    const chosen = rooms.createRoom({ nickname: 'Zoé', gameId: 'fixture' });
+    expect(chosen.room.selectedGame).toBe('fixture');
+    expect(rooms.createRoom({ nickname: 'Tom' }).room.selectedGame).toBe('fixture');
+  });
+
+  it('lets only the host set the game up, in the lobby', () => {
     expect(errorCode(() => rooms.setSettings(bob, { rounds: 3 }))).toBe('NOT_HOST');
-    expect(errorCode(() => rooms.selectGame(host, 'nope'))).toBe('GAME_NOT_FOUND');
     expect(errorCode(() => rooms.setSettings(host, { rounds: 99 }))).toBe('INVALID_SETTINGS');
     rooms.setSettings(host, { rounds: 1 });
     expect(room().settings).toMatchObject({ rounds: 1 });

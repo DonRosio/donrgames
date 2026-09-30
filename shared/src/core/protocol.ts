@@ -23,7 +23,6 @@ export interface ClientToServerEvents {
   'room:kick': (payload: { playerId: string }, ack: AckCallback) => void;
   'room:transferHost': (payload: { playerId: string }, ack: AckCallback) => void;
   'room:close': (payload: EmptyPayload, ack: AckCallback) => void;
-  'room:selectGame': (payload: { gameId: string }, ack: AckCallback) => void;
   'room:setSettings': (
     payload: { settings: Record<string, SettingValue> },
     ack: AckCallback,
@@ -43,6 +42,8 @@ export interface ServerToClientEvents {
 
 export interface CreateRoomRequest {
   nickname: string;
+  /** The room plays this game only. */
+  gameId?: string;
 }
 
 export interface JoinRoomRequest {

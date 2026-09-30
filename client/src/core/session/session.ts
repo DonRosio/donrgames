@@ -142,10 +142,6 @@ export class Session {
     return this.#request('room:close', {});
   }
 
-  selectGame(gameId: string): Promise<void> {
-    return this.#request('room:selectGame', { gameId });
-  }
-
   setSettings(settings: Record<string, SettingValue>): Promise<void> {
     return this.#request('room:setSettings', { settings });
   }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { GameInfo, PlayerView, RoomView } from '@mini-jeux/shared';
 import { navigate } from '../../app/router.ts';
-import { GamePanel } from '../game-host/GamePanel.tsx';
+import { GameExtras, GamePanel, gameCardTitle } from '../game-host/GamePanel.tsx';
 import { errorMessage } from '../session/errors.ts';
 import type { Session } from '../session/session.ts';
 import { sessionStore } from '../session/storage.ts';
@@ -53,10 +53,12 @@ export function Lobby(props: { room: RoomView; session: Session; catalog: GameIn
         </section>
 
         <section className="card">
-          <h2 className={styles.title}>Jeu</h2>
+          <h2 className={styles.title}>{gameCardTitle(room, catalog)}</h2>
           <GamePanel room={room} catalog={catalog} session={session} />
         </section>
       </div>
+
+      <GameExtras room={room} catalog={catalog} />
 
       {error && (
         <p className="error" role="alert">
@@ -103,7 +105,7 @@ function confirmation(action: PendingAction) {
       return {
         title: `Nommer ${action.player.nickname} hôte ?`,
         message:
-          "Tu ne pourras plus choisir les jeux ni gérer le salon, sauf s'il te rend le rôle.",
+          "Tu ne pourras plus régler ni lancer la partie, ni gérer le salon, sauf s'il te rend le rôle.",
         confirmLabel: 'Nommer hôte',
       };
     case 'leave':

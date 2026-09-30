@@ -3,17 +3,6 @@
   gap: 16px;
 }
 
-.choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chosen {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .name {
   font-family: var(--font-title);
   font-size: 1.5rem;

@@ -15,7 +15,6 @@ import {
   emptyPayloadSchema,
   gameActionSchema,
   playerTargetSchema,
-  selectGameSchema,
   setSettingsSchema,
   socketAuthSchema,
 } from '@mini-jeux/shared/schemas';
@@ -197,7 +196,6 @@ export function createRealtime(deps: RealtimeDeps): IoServer {
       rooms.transferHost(s, playerId),
     );
     handle('room:close', emptyPayloadSchema, (s) => rooms.close(s));
-    handle('room:selectGame', selectGameSchema, (s, { gameId }) => rooms.selectGame(s, gameId));
     handle('room:setSettings', setSettingsSchema, (s, { settings }) =>
       rooms.setSettings(s, settings),
     );
