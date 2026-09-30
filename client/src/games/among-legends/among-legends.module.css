@@ -465,3 +465,20 @@
 .voteGroup h4 {
   margin: 0;
 }
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 6px 24px;
+  margin: 0;
+}
+
+.summary dt {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.summary dd {
+  margin: 0;
+  font-weight: 600;
+}

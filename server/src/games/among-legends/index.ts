@@ -125,7 +125,21 @@ function othersOf(state: AmongLegendsState, playerId: string): string[] {
   return [...state.teams.keys()].filter((id) => id !== playerId);
 }
 
-/** Debrief → results, provided the stats are in. Ballots missing are simply ignored. */
+/** Refuses statistics that do not fit the teams (`ctx.reject`), before anything is stored. */
+function checkStats(state: AmongLegendsState, ctx: Ctx, stats: GameStats): void {
+  const teams = state.size === 10 ? (['blue', 'red'] as const) : (['blue'] as const);
+  if (Object.keys(stats.teams).some((team) => !teams.some((t) => t === team))) {
+    ctx.reject('STATS_INVALID');
+  }
+  for (const team of teams) {
+    const answers = stats.teams[team];
+    if (!answers) ctx.reject('STATS_INVALID');
+    const error = validateTeamStats(answers!, membersOf(state, team));
+    if (error) ctx.reject(error);
+  }
+}
+
+/** Voting → results, provided the stats are in. Ballots missing are simply ignored. */
 function openResults(state: AmongLegendsState, ctx: Ctx): void {
   const teams = Object.fromEntries(state.teams) as Record<string, Team>;
   const scores = computeScores({
@@ -211,7 +225,7 @@ export const amongLegendsGame = defineGame({
     },
     playing: {
       actions: ['end'],
-      next: ['debrief'],
+      next: ['stats'],
       enter(state, ctx) {
         state.startedAt = ctx.now();
         scheduleSwitch(state, ctx);
@@ -222,7 +236,7 @@ export const amongLegendsGame = defineGame({
       on: {
         end(state, ctx) {
           state.endedAt = ctx.now();
-          ctx.goto('debrief');
+          ctx.goto('stats');
         },
       },
       timer(state, ctx, id) {
@@ -237,21 +251,24 @@ export const amongLegendsGame = defineGame({
         scheduleSwitch(state, ctx);
       },
     },
-    debrief: {
+    stats: {
+      actions: ['submitStats'],
+      next: ['voting'],
+      on: {
+        submitStats(state, ctx, _from, stats) {
+          checkStats(state, ctx, stats);
+          state.stats = stats;
+          ctx.goto('voting');
+        },
+      },
+    },
+    voting: {
+      // The host can still correct the statistics: everybody then sees the new ones.
       actions: ['submitStats', 'vote', 'reveal'],
       next: ['results'],
       on: {
         submitStats(state, ctx, _from, stats) {
-          const teams = state.size === 10 ? (['blue', 'red'] as const) : (['blue'] as const);
-          if (Object.keys(stats.teams).some((team) => !teams.some((t) => t === team))) {
-            ctx.reject('STATS_INVALID');
-          }
-          for (const team of teams) {
-            const answers = stats.teams[team];
-            if (!answers) return ctx.reject('STATS_INVALID');
-            const error = validateTeamStats(answers, membersOf(state, team));
-            if (error) ctx.reject(error);
-          }
+          checkStats(state, ctx, stats);
           state.stats = stats;
         },
         vote(state, ctx, from, { guesses }) {
@@ -267,7 +284,6 @@ export const amongLegendsGame = defineGame({
           state.ballots.set(from, guesses);
         },
         reveal(state, ctx) {
-          if (!state.stats) ctx.reject('STATS_MISSING');
           if (ctx.players.awaited().some((id) => !state.ballots.has(id))) {
             ctx.reject('VOTES_MISSING');
           }
@@ -303,14 +319,14 @@ export const amongLegendsGame = defineGame({
         read: [...state.read],
       };
     }
-    if (ctx.phase === 'debrief') {
+    if (ctx.phase === 'stats') return { ...common, phase: 'stats' };
+    if (ctx.phase === 'voting') {
       return {
         ...common,
-        phase: 'debrief',
+        phase: 'voting',
         voted: [...state.ballots.keys()],
         myGuesses: state.ballots.get(viewer) ?? null,
-        statsSent: state.stats !== null,
-        stats: state.stats,
+        stats: state.stats!,
       };
     }
     if (ctx.phase === 'results') {
@@ -367,7 +383,7 @@ export const amongLegendsGame = defineGame({
   onSkip(state, ctx) {
     // "Passer à la suite" during the briefing: the League of Legends game has started.
     if (ctx.phase === 'briefing') ctx.goto('playing');
-    // During the debrief: show the results without waiting for the missing votes.
-    if (ctx.phase === 'debrief' && state.stats) openResults(state, ctx);
+    // During the vote: show the results without waiting for the missing votes.
+    if (ctx.phase === 'voting') openResults(state, ctx);
   },
 });

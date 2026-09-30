@@ -221,17 +221,17 @@ describe('Among Legends: during the game', () => {
     expect(view(g!, chameleon, 'playing').alert).toEqual({ seq: 2, kind: 'twoFace' });
   });
 
-  it('opens the debrief when the host says the League of Legends game is over', () => {
+  it('waits for the statistics when the host says the League of Legends game is over', () => {
     const g = play();
     g.act('alice', 'start');
     expect(g.act('bob', 'end')).toEqual({ ok: false, error: 'NOT_HOST' });
     expect(g.act('alice', 'end')).toEqual({ ok: true });
-    view(g, 'bob', 'debrief');
+    view(g, 'bob', 'stats');
     expect(g.ended).toBe(false);
   });
 });
 
-describe('Among Legends: debrief and results', () => {
+describe('Among Legends: statistics, vote and results', () => {
   const KEPT: RoleId[] = ['impostor', 'superhero', 'snake', 'crook', 'pacifist'];
 
   /** A valid set of answers about a team of five. */
@@ -258,12 +258,19 @@ describe('Among Legends: debrief and results', () => {
     g.act('alice', 'start');
     return g;
   };
-  const inDebrief = (roles: RoleId[] = KEPT) => {
+  /** The game is over: the host has not entered the statistics yet. */
+  const inStats = (roles: RoleId[] = KEPT) => {
     const g = started(roles);
     g.act('alice', 'end');
     return g;
   };
-  const tenInDebrief = () => {
+  /** The host sent the statistics: everybody votes. */
+  const inVoting = (roles: RoleId[] = KEPT) => {
+    const g = inStats(roles);
+    send(g);
+    return g;
+  };
+  const tenInStats = () => {
     const g = play(TEN, KEPT);
     for (const p of TEN) g.act(p, 'chooseTeam', { team: TEN.indexOf(p) < 5 ? 'blue' : 'red' });
     g.act('alice', 'confirmTeams');
@@ -272,44 +279,45 @@ describe('Among Legends: debrief and results', () => {
     return g;
   };
 
-  it('does not reveal any role before the results', () => {
-    const v = view(inDebrief(), 'bob', 'debrief');
-    expect(Object.keys(v).sort()).toEqual(
-      [
-        'myGuesses',
-        'phase',
-        'role',
-        'roles',
-        'size',
-        'stats',
-        'statsSent',
-        'teams',
-        'voted',
-      ].sort(),
-    );
-  });
+  describe('statistics', () => {
+    it('come first: the others wait and nobody can vote yet', () => {
+      const g = inStats();
+      expect(Object.keys(view(g, 'bob', 'stats')).sort()).toEqual(
+        ['phase', 'role', 'roles', 'size', 'teams'].sort(),
+      );
+      expect(g.act('bob', 'vote', { guesses: guessesOf(g, 'bob') })).toEqual({
+        ok: false,
+        error: 'WRONG_PHASE',
+      });
+      expect(g.act('alice', 'reveal')).toEqual({ ok: false, error: 'WRONG_PHASE' });
+      g.skip();
+      view(g, 'bob', 'stats');
+    });
 
-  it('stops the alarms of the game', () => {
-    const g = started(['impostor', 'two-face', 'superhero', 'snake', 'crook']);
-    g.advance(3 * MINUTE);
-    g.act('alice', 'end');
-    g.advance(30 * MINUTE);
-    view(g, 'bob', 'debrief');
-  });
+    it('stop the alarms of the game', () => {
+      const g = started(['impostor', 'two-face', 'superhero', 'snake', 'crook']);
+      g.advance(3 * MINUTE);
+      g.act('alice', 'end');
+      g.advance(30 * MINUTE);
+      view(g, 'bob', 'stats');
+    });
 
-  describe('stats', () => {
-    it('are sent by the host only, and can be corrected', () => {
-      const g = inDebrief();
+    it('are sent by the host only, and then open the vote for everybody', () => {
+      const g = inStats();
       const payload = { winner: 'blue', minutes: 30, teams: { blue: stats(FIVE) } } as const;
       expect(g.act('bob', 'submitStats', payload)).toEqual({ ok: false, error: 'NOT_HOST' });
       expect(send(g)).toEqual({ ok: true });
-      expect(view(g, 'bob', 'debrief')).toMatchObject({ statsSent: true, stats: { minutes: 30 } });
-      expect(send(g, 'red', 45)).toEqual({ ok: true });
-      expect(view(g, 'bob', 'debrief').stats).toMatchObject({ winner: 'red', minutes: 45 });
+      for (const p of FIVE) {
+        expect(view(g, p, 'voting').stats).toMatchObject({
+          winner: 'blue',
+          minutes: 30,
+          teams: { blue: stats(FIVE) },
+        });
+      }
     });
 
     it('are refused when incoherent, and then not kept', () => {
-      const g = inDebrief();
+      const g = inStats();
       const attempt = (override: Partial<TeamStats>) =>
         g.act('alice', 'submitStats', {
           winner: 'blue',
@@ -323,11 +331,11 @@ describe('Among Legends: debrief and results', () => {
         ok: false,
         error: 'STATS_OVERLAP',
       });
-      expect(view(g, 'alice', 'debrief').statsSent).toBe(false);
+      view(g, 'alice', 'stats');
     });
 
     it('with one team, refuse a second team', () => {
-      const g = inDebrief();
+      const g = inStats();
       expect(
         g.act('alice', 'submitStats', {
           winner: 'blue',
@@ -338,7 +346,7 @@ describe('Among Legends: debrief and results', () => {
     });
 
     it('with two teams, need both, each about its own players', () => {
-      const g = tenInDebrief();
+      const g = tenInStats();
       const blue = TEN.slice(0, 5);
       const red = TEN.slice(5);
       const submit = (teams: { blue: TeamStats; red?: TeamStats }) =>
@@ -349,16 +357,35 @@ describe('Among Legends: debrief and results', () => {
         error: 'STATS_INVALID',
       });
       expect(submit({ blue: stats(blue), red: stats(red) })).toEqual({ ok: true });
+      view(g, 'jules', 'voting');
     });
 
-    it('are refused outside the debrief', () => {
+    it('can be corrected by the host during the vote, for everybody', () => {
+      const g = inVoting();
+      g.act('bob', 'vote', { guesses: guessesOf(g, 'bob') });
+      expect(send(g, 'red', 45)).toEqual({ ok: true });
+      expect(view(g, 'carol', 'voting').stats).toMatchObject({ winner: 'red', minutes: 45 });
+      // The votes already cast are kept.
+      expect(view(g, 'carol', 'voting').voted).toEqual(['bob']);
+      const payload = { winner: 'blue', minutes: 30, teams: { blue: stats(FIVE) } } as const;
+      expect(g.act('bob', 'submitStats', payload)).toEqual({ ok: false, error: 'NOT_HOST' });
+    });
+
+    it('are refused before the end of the game', () => {
       expect(send(started())).toEqual({ ok: false, error: 'WRONG_PHASE' });
     });
   });
 
   describe('votes', () => {
+    it('do not reveal any role', () => {
+      const v = view(inVoting(), 'bob', 'voting');
+      expect(Object.keys(v).sort()).toEqual(
+        ['myGuesses', 'phase', 'role', 'roles', 'size', 'stats', 'teams', 'voted'].sort(),
+      );
+    });
+
     it('need a guess for every other player, among the roles in game', () => {
-      const g = inDebrief();
+      const g = inVoting();
       const all = guessesOf(g, 'bob');
       const { alice: _alice, ...missing } = all;
       const vote = (guesses: Record<string, RoleId>) => g.act('bob', 'vote', { guesses });
@@ -367,23 +394,28 @@ describe('Among Legends: debrief and results', () => {
       expect(vote({ ...all, zed: 'snake' })).toEqual({ ok: false, error: 'BAD_VOTE' });
       // The Droïde is not among the roles kept.
       expect(vote({ ...all, alice: 'droid' })).toEqual({ ok: false, error: 'BAD_VOTE' });
-      expect(view(g, 'bob', 'debrief').myGuesses).toBeNull();
+      expect(view(g, 'bob', 'voting').myGuesses).toBeNull();
     });
 
     it('are final, and shown as voted to everybody', () => {
-      const g = inDebrief();
+      const g = inVoting();
       expect(g.act('bob', 'vote', { guesses: guessesOf(g, 'bob') })).toEqual({ ok: true });
       expect(g.act('bob', 'vote', { guesses: guessesOf(g, 'bob') })).toEqual({
         ok: false,
         error: 'ALREADY_VOTED',
       });
-      expect(view(g, 'carol', 'debrief').voted).toEqual(['bob']);
-      expect(view(g, 'carol', 'debrief').myGuesses).toBeNull();
-      expect(view(g, 'bob', 'debrief').myGuesses).toEqual(guessesOf(g, 'bob'));
+      expect(view(g, 'carol', 'voting').voted).toEqual(['bob']);
+      expect(view(g, 'carol', 'voting').myGuesses).toBeNull();
+      expect(view(g, 'bob', 'voting').myGuesses).toEqual(guessesOf(g, 'bob'));
     });
 
     it('with ten players, guess the other team too: nine guesses', () => {
-      const g = tenInDebrief();
+      const g = tenInStats();
+      g.act('alice', 'submitStats', {
+        winner: 'red',
+        minutes: 30,
+        teams: { blue: stats(TEN.slice(0, 5)), red: stats(TEN.slice(5)) },
+      });
       expect(Object.keys(guessesOf(g, 'fanny', TEN))).toHaveLength(9);
       expect(g.act('fanny', 'vote', { guesses: guessesOf(g, 'fanny', TEN) })).toEqual({ ok: true });
       expect(g.act('gabin', 'vote', { guesses: guessesOf(g, 'gabin') })).toEqual({
@@ -394,10 +426,8 @@ describe('Among Legends: debrief and results', () => {
   });
 
   describe('results', () => {
-    it('wait for the stats and for the votes', () => {
-      const g = inDebrief();
-      expect(g.act('alice', 'reveal')).toEqual({ ok: false, error: 'STATS_MISSING' });
-      send(g);
+    it('wait for the votes, and are shown by the host only', () => {
+      const g = inVoting();
       expect(g.act('alice', 'reveal')).toEqual({ ok: false, error: 'VOTES_MISSING' });
       expect(g.act('bob', 'reveal')).toEqual({ ok: false, error: 'NOT_HOST' });
       everybodyVotes(g);
@@ -406,8 +436,7 @@ describe('Among Legends: debrief and results', () => {
     });
 
     it('no longer wait for a player disconnected for a minute', () => {
-      const g = inDebrief();
-      send(g);
+      const g = inVoting();
       for (const p of FIVE.filter((x) => x !== 'erin')) {
         g.act(p, 'vote', { guesses: guessesOf(g, p) });
       }
@@ -418,11 +447,8 @@ describe('Among Legends: debrief and results', () => {
       expect(view(g, 'alice', 'results').players.erin!.voted).toBe(false);
     });
 
-    it('"Passer à la suite" shows them without the missing votes, but never without stats', () => {
-      const g = inDebrief();
-      g.skip();
-      view(g, 'alice', 'debrief');
-      send(g);
+    it('"Passer à la suite" shows them without the missing votes', () => {
+      const g = inVoting();
       g.act('bob', 'vote', { guesses: guessesOf(g, 'bob') });
       g.skip();
       const v = view(g, 'alice', 'results');
@@ -433,7 +459,7 @@ describe('Among Legends: debrief and results', () => {
     });
 
     it('reveal every role, the outcome and the points, computed by the rules', () => {
-      const g = inDebrief();
+      const g = inStats();
       send(g, 'blue', 30);
       everybodyVotes(g);
       g.act('alice', 'reveal');
@@ -455,6 +481,18 @@ describe('Among Legends: debrief and results', () => {
         const expected = base[role] + (bonus[role]?.[p] ?? 0) + 4 - (role === 'superhero' ? 0 : 4);
         expect(v.players[p]!.total).toBe(expected);
       }
+    });
+
+    it('use the corrected statistics', () => {
+      const g = inVoting();
+      everybodyVotes(g);
+      send(g, 'red', 30);
+      g.act('alice', 'reveal');
+      const v = view(g, 'alice', 'results');
+      expect(v.winner).toBe('red');
+      const impostor = FIVE.find((p) => roleOf(g, p) === 'impostor')!;
+      // A defeat: +2 for the Imposteur.
+      expect(v.players[impostor]!.lines.find((l) => l.rule === 'loss')?.points).toBe(2);
     });
 
     it('give the Double Face its mode at the end of the game, by the clock of the site', () => {
@@ -502,8 +540,7 @@ describe('Among Legends: debrief and results', () => {
     });
 
     it('end the game with the scores, ranked by the core', () => {
-      const g = inDebrief();
-      send(g);
+      const g = inVoting();
       everybodyVotes(g);
       g.act('alice', 'reveal');
       const results = view(g, 'alice', 'results');

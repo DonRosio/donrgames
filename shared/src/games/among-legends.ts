@@ -38,7 +38,7 @@ export const amongLegendsContract = defineContract({
     playerCounts: [5, 10],
     replayable: true,
   },
-  phases: ['teams', 'briefing', 'playing', 'debrief', 'results'],
+  phases: ['teams', 'briefing', 'playing', 'stats', 'voting', 'results'],
   settings: {
     roles: { kind: 'multi', label: 'Rôles en jeu', min: 5, options: roleOptions },
   },
@@ -50,9 +50,9 @@ export const amongLegendsContract = defineContract({
     read: { payload: z.strictObject({}) },
     /** "La partie a commencé": the League of Legends game timer just started. */
     start: { payload: z.strictObject({}), hostOnly: true },
-    /** "La partie est terminée": stops the clock and opens the debrief. */
+    /** "La partie est terminée": stops the clock; the host then enters the statistics. */
     end: { payload: z.strictObject({}), hostOnly: true },
-    /** Debrief: what the host reads on the end screen of the game (can be sent again). */
+    /** What the host reads on the end screen of the game; sending them opens the vote. Can be sent again (correction) during the vote. */
     submitStats: {
       payload: z.strictObject({
         winner: z.enum(['blue', 'red']),
@@ -61,7 +61,7 @@ export const amongLegendsContract = defineContract({
       }),
       hostOnly: true,
     },
-    /** Debrief: my guess of the role of every other player (final). */
+    /** Vote: my guess of the role of every other player (final). */
     vote: {
       payload: z.strictObject({
         guesses: z
@@ -69,7 +69,7 @@ export const amongLegendsContract = defineContract({
           .refine((guesses) => Object.keys(guesses).length <= 9),
       }),
     },
-    /** Debrief → results, once the stats are in and everybody voted. */
+    /** Vote → results, once everybody voted. */
     reveal: { payload: z.strictObject({}), hostOnly: true },
     /** Results → final ranking. */
     finish: { payload: z.strictObject({}), hostOnly: true },
@@ -81,7 +81,6 @@ export const amongLegendsContract = defineContract({
     'STATS_INCOMPLETE',
     'STATS_ZERO_KILLS',
     'STATS_OVERLAP',
-    'STATS_MISSING',
     'ALREADY_VOTED',
     'BAD_VOTE',
     'VOTES_MISSING',
@@ -145,15 +144,17 @@ export type AmongLegendsView =
       alert: Alert | null;
     })
   | (WithTeams & {
-      phase: 'debrief';
+      /** The host reads the statistics; the others wait. */
+      phase: 'stats';
+    })
+  | (WithTeams & {
+      phase: 'voting';
       /** Who has voted. */
       voted: string[];
       /** The viewer's own guesses, once sent. */
       myGuesses: Record<string, RoleId> | null;
-      /** Whether the host sent the stats of the game. */
-      statsSent: boolean;
-      /** The stats already sent (public: they are on the end screen of the game), to correct them. */
-      stats: GameStats | null;
+      /** What the host entered, shown to everybody under the vote. */
+      stats: GameStats;
     })
   | (WithTeams & {
       phase: 'results';

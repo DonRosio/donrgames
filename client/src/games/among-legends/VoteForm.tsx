@@ -11,7 +11,7 @@ export function VoteForm({
   view,
   room,
   act,
-}: Pick<ScreenProps<'debrief'>, 'view' | 'room' | 'act'>) {
+}: Pick<ScreenProps<'voting'>, 'view' | 'room' | 'act'>) {
   const [guesses, setGuesses] = useState<Partial<Record<string, RoleId>>>({});
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
