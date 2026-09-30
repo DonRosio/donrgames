@@ -116,7 +116,7 @@ describe('computeScores: common rules', () => {
     expect(rule(scores, 'a', 'found')).toBe(-4);
   });
 
-  it('no malus for the SuperHéro when found, but the bonus for those who missed', () => {
+  it('no malus for the Super-Héros when found, but the bonus for those who missed', () => {
     const roles = ['superhero', 'crook', 'pacifist', 'snake', 'impostor'] as RoleId[];
     const scores = game(roles, {
       ballots: { b: { a: 'superhero' }, c: { a: 'superhero' }, d: { a: 'snake' } },
@@ -145,7 +145,7 @@ describe('computeScores: roles', () => {
     expect(loss.a!.total).toBe(2 + 2 + 2 - 1);
   });
 
-  it('SuperHéro: +2 / −3, and a bonus for kills, assists and damage even after a defeat', () => {
+  it('Super-Héros: +2 / −3, and a bonus for kills, assists and damage even after a defeat', () => {
     const roles = ['superhero', 'snake', 'crook', 'pacifist', 'impostor'] as RoleId[];
     const named = { mostKills: ['a'], mostAssists: ['a', 'b'], mostDamage: ['a'] };
     const win = game(roles, { won: true, named });
@@ -246,11 +246,11 @@ describe('computeScores: Chameleon', () => {
     expect(rule(scores, 'a', 'notFound')).toBe(1);
   });
 
-  it('has no malus when found as a SuperHéro (current role)', () => {
+  it('has no malus when found as a Super-Héros (current role)', () => {
     const ballots: Ballots = { b: { a: 'chameleon' }, c: { a: 'chameleon' } };
     const scores = game(roles, { revealed: { a: 'superhero' }, ballots });
     expect(rule(scores, 'a', 'found')).toBe(0);
-    // SuperHéro: +2, mission (win) +1.
+    // Super-Héros: +2, mission (win) +1.
     expect(scores.a!.total).toBe(3);
   });
 

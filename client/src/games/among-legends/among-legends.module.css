@@ -236,37 +236,115 @@
   gap: 12px;
 }
 
-.arrow {
-  flex: none;
-  width: 44px;
-  padding: 0;
-  font-size: 1.3rem;
+/* Chevron arrows: thick, rounded, gold like the buttons, with a soft glow. */
+.arrowDefs {
+  position: absolute;
 }
 
-/* One role per screen: each tile is as wide as the card. */
+.arrow {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 48px;
+  height: 84px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.chevron {
+  width: 34px;
+  height: 54px;
+  filter: drop-shadow(0 3px 3px rgb(20 8 0 / 60%)) drop-shadow(0 0 9px rgb(247 181 68 / 35%));
+  transition: filter 0.15s ease;
+}
+
+.arrowLeft .chevron {
+  transform: scaleX(-1);
+}
+
+.arrow:hover .chevron {
+  filter: brightness(1.18) drop-shadow(0 3px 3px rgb(20 8 0 / 60%))
+    drop-shadow(0 0 14px rgb(255 212 106 / 60%));
+}
+
+.arrow:active {
+  transform: scale(0.92);
+}
+
+.arrow:focus-visible {
+  border-radius: var(--radius-small);
+}
+
+/* One role per screen: each tile is as wide as the card. Endless, and no scroll bar. */
 .track {
   display: flex;
   flex: 1;
   min-width: 0;
   gap: 16px;
   margin: 0;
-  padding: 4px 0 12px;
+  padding: 4px 0;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   list-style: none;
+  cursor: grab;
   scroll-snap-type: x mandatory;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-width: none;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.track.dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
 }
 
 .roleTile {
-  display: grid;
+  display: flex;
   flex: 0 0 100%;
-  align-content: start;
-  gap: 8px;
+  align-items: center;
+  gap: 20px;
   padding: 16px 20px;
   border: 1px solid rgb(255 232 170 / 24%);
   border-radius: var(--radius-small);
   background: rgb(20 12 14 / 60%);
   scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.tileText {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tilePicture {
+  flex: none;
+  width: auto;
+  max-width: 42%;
+  height: clamp(170px, 26vw, 280px);
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px rgb(0 0 0 / 50%));
+  user-select: none;
+}
+
+@media (width <= 640px) {
+  .roleTile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tilePicture {
+    align-self: center;
+    max-width: 100%;
+  }
 }
 
 .tileName {

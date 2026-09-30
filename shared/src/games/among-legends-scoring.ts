@@ -244,7 +244,7 @@ function roleOutcome(role: RoleId, facts: Facts): RoleOutcome {
  * Points of every player at the end of a game.
  *
  * - Common rules: +1 per correct guess, −1 per wrong one; +1 per voter who did not find your
- *   role, −1 per voter who did (no malus for the SuperHéro).
+ *   role, −1 per voter who did (no malus for the Super-Héros).
  * - Then the rules of the role. The Chameleon plays its real role once it discovered it, with
  *   +1 if it fulfils that role's main mission; before that (short game), only the common rules.
  * - A player without a ballot neither gives nor costs anything to the others.

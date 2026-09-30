@@ -51,7 +51,7 @@ export const ROLES: Readonly<Record<RoleId, RoleInfo>> = {
   },
   superhero: {
     id: 'superhero',
-    name: 'SuperHéro',
+    name: 'Super-Héros',
     goal: 'Tu dois absolument gagner la partie. Bonus si tu es premier de ton équipe en kills, en dégâts ou en assists.',
     points: [
       '+2 en cas de victoire, −3 en cas de défaite',

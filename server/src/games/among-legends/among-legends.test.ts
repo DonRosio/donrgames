@@ -467,7 +467,7 @@ describe('Among Legends: statistics, vote and results', () => {
       expect(v).toMatchObject({ winner: 'blue', minutes: 30, myGuesses: guessesOf(g, 'dave') });
       // Team stats: alice most kills and damage, bob most deaths, carol most assists, erin fewest
       // kills. Victory. Everybody guessed everything: +4 for the guesses, −4 for having been
-      // found (none for the SuperHéro).
+      // found (none for the Super-Héros).
       const bonus: Record<string, Record<string, number>> = {
         superhero: { alice: 2, carol: 1 },
         snake: { alice: 1, bob: 1 },
