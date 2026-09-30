@@ -21,9 +21,11 @@ export async function openPlayer(browser: Browser, name: string): Promise<Player
   return { name, page, errors };
 }
 
-export async function createRoom(host: Player): Promise<string> {
+/** Creates a room for a game, chosen by name on the home page (Doublage by default). */
+export async function createRoom(host: Player, game = 'Doublage'): Promise<string> {
   await host.page.goto('/');
   await host.page.getByLabel('Ton pseudo').fill(host.name);
+  await host.page.getByRole('radio', { name: new RegExp(game) }).click();
   await host.page.getByRole('button', { name: 'Créer une partie' }).click();
   await host.page.waitForURL(/\/room\/[A-Z0-9]{6}$/);
   return host.page.url().split('/').at(-1)!;

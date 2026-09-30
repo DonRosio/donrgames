@@ -2,6 +2,7 @@ import type { RoomView } from '@mini-jeux/shared';
 import type { AmongLegendsContract, AmongLegendsView } from '@mini-jeux/shared/games/among-legends';
 import { COMMON_POINTS, ROLES, TEAM_NAMES } from '@mini-jeux/shared/games/among-legends-roles';
 import type { RoleId, Team } from '@mini-jeux/shared/games/among-legends-roles';
+import type { StatsError } from '@mini-jeux/shared/games/among-legends-scoring';
 import type { GameScreenProps } from '../../core/game-host/client-game.ts';
 import styles from './among-legends.module.css';
 
@@ -82,3 +83,21 @@ export function Teams({
     </div>
   );
 }
+
+/** Rule errors of the end-of-game form, told the same way by the server and by the form itself. */
+export const STATS_ERROR_MESSAGES: Record<StatsError, string> = {
+  STATS_INVALID: 'Ces réponses ne correspondent pas aux joueurs de l’équipe.',
+  STATS_INCOMPLETE: 'Chaque question demande au moins un joueur (sauf « 0 kill »).',
+  STATS_ZERO_KILLS: 'Les joueurs à 0 kill doivent être exactement ceux qui ont le moins de kills.',
+  STATS_OVERLAP:
+    'Le « plus » et le « moins » ne peuvent pas nommer le même joueur, sauf si toute l’équipe est à égalité.',
+};
+
+/** Players of a team, in the order of the room. */
+export const membersOf = (teams: Record<string, Team | null>, team: Team): string[] =>
+  Object.entries(teams)
+    .filter(([, t]) => t === team)
+    .map(([id]) => id);
+
+/** Teams that play: the single one with five players, both with ten. */
+export const teamsOf = (size: 5 | 10): Team[] => (size === 5 ? ['blue'] : ['blue', 'red']);

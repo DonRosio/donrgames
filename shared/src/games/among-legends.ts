@@ -3,6 +3,8 @@ import { defineContract } from '../core/game.ts';
 import type { MultiOption } from '../core/game.ts';
 import { ROLES, ROLE_IDS } from './among-legends-roles.ts';
 import type { RoleId, Team, TwoFaceMode } from './among-legends-roles.ts';
+import { STAT_KEYS } from './among-legends-scoring.ts';
+import type { GameStats, PlayerScore } from './among-legends-scoring.ts';
 
 const NOTES: Partial<Record<RoleId, Pick<MultiOption, 'locked' | 'note' | 'minWhenChecked'>>> = {
   impostor: { locked: true, note: 'toujours en jeu' },
@@ -16,6 +18,15 @@ const roleOptions = ROLE_IDS.map((id) => ({
   ...(ROLES[id].inDevelopment ? { disabled: true, note: 'en développement' } : {}),
 }));
 
+/** Players named in one answer of the end-of-game form (at most one team). */
+const players = z.array(z.string().max(64)).max(5);
+const teamStats = z.strictObject(
+  Object.fromEntries(STAT_KEYS.map((key) => [key, players])) as Record<
+    (typeof STAT_KEYS)[number],
+    typeof players
+  >,
+);
+
 export const amongLegendsContract = defineContract({
   meta: {
     id: 'among-legends',
@@ -27,7 +38,7 @@ export const amongLegendsContract = defineContract({
     playerCounts: [5, 10],
     replayable: true,
   },
-  phases: ['teams', 'briefing', 'playing'],
+  phases: ['teams', 'briefing', 'playing', 'debrief', 'results'],
   settings: {
     roles: { kind: 'multi', label: 'Rôles en jeu', min: 5, options: roleOptions },
   },
@@ -39,10 +50,42 @@ export const amongLegendsContract = defineContract({
     read: { payload: z.strictObject({}) },
     /** "La partie a commencé": the League of Legends game timer just started. */
     start: { payload: z.strictObject({}), hostOnly: true },
-    /** "La partie est terminée". */
+    /** "La partie est terminée": stops the clock and opens the debrief. */
     end: { payload: z.strictObject({}), hostOnly: true },
+    /** Debrief: what the host reads on the end screen of the game (can be sent again). */
+    submitStats: {
+      payload: z.strictObject({
+        winner: z.enum(['blue', 'red']),
+        minutes: z.number().int().min(1).max(180),
+        teams: z.strictObject({ blue: teamStats, red: teamStats.optional() }),
+      }),
+      hostOnly: true,
+    },
+    /** Debrief: my guess of the role of every other player (final). */
+    vote: {
+      payload: z.strictObject({
+        guesses: z
+          .record(z.string().max(64), z.enum(ROLE_IDS))
+          .refine((guesses) => Object.keys(guesses).length <= 9),
+      }),
+    },
+    /** Debrief → results, once the stats are in and everybody voted. */
+    reveal: { payload: z.strictObject({}), hostOnly: true },
+    /** Results → final ranking. */
+    finish: { payload: z.strictObject({}), hostOnly: true },
   },
-  errors: ['TEAM_FULL', 'TEAMS_INCOMPLETE'],
+  errors: [
+    'TEAM_FULL',
+    'TEAMS_INCOMPLETE',
+    'STATS_INVALID',
+    'STATS_INCOMPLETE',
+    'STATS_ZERO_KILLS',
+    'STATS_OVERLAP',
+    'STATS_MISSING',
+    'ALREADY_VOTED',
+    'BAD_VOTE',
+    'VOTES_MISSING',
+  ],
 });
 
 export type AmongLegendsContract = typeof amongLegendsContract;
@@ -68,6 +111,20 @@ interface WithTeams extends Base {
   role: RoleId;
 }
 
+/** What everybody learns about a player once the results are shown. */
+export interface ResultPlayer extends PlayerScore {
+  /** Role drawn (a Chameleon stays a Chameleon here). */
+  role: RoleId;
+  /** Chameleon that discovered its real role: that role. */
+  revealedRole: RoleId | null;
+  /** Double Face (or Chameleon turned into one): mode at the end of the game. */
+  mode: TwoFaceMode | null;
+  /** Voters who found the real role of this player. */
+  foundBy: string[];
+  /** Whether this player voted. */
+  voted: boolean;
+}
+
 export type AmongLegendsView =
   | (Base & { phase: 'teams'; teams: Record<string, Team | null> })
   | (WithTeams & {
@@ -86,4 +143,24 @@ export type AmongLegendsView =
       /** Chameleon only: when its real role is revealed, and that role once revealed. */
       chameleon: { revealAt: number; role: RoleId | null } | null;
       alert: Alert | null;
+    })
+  | (WithTeams & {
+      phase: 'debrief';
+      /** Who has voted. */
+      voted: string[];
+      /** The viewer's own guesses, once sent. */
+      myGuesses: Record<string, RoleId> | null;
+      /** Whether the host sent the stats of the game. */
+      statsSent: boolean;
+      /** The stats already sent (public: they are on the end screen of the game), to correct them. */
+      stats: GameStats | null;
+    })
+  | (WithTeams & {
+      phase: 'results';
+      winner: Team;
+      minutes: number;
+      /** Everything about everybody, roles included. */
+      players: Record<string, ResultPlayer>;
+      /** The viewer's own guesses (null when they did not vote). */
+      myGuesses: Record<string, RoleId> | null;
     });

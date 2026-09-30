@@ -3,6 +3,7 @@ import type {
   Alert,
   AmongLegendsContract,
   AmongLegendsView,
+  ResultPlayer,
 } from '@mini-jeux/shared/games/among-legends';
 import {
   CHAMELEON_REVEAL_MS,
@@ -11,6 +12,8 @@ import {
   twoFaceModeAt,
 } from '@mini-jeux/shared/games/among-legends-roles';
 import type { RoleId, Team, TwoFaceMode } from '@mini-jeux/shared/games/among-legends-roles';
+import { computeScores, validateTeamStats } from '@mini-jeux/shared/games/among-legends-scoring';
+import type { GameStats, PlayerScore } from '@mini-jeux/shared/games/among-legends-scoring';
 import { defineGame } from '../../core/engine/types.ts';
 import type { GameContext } from '../../core/engine/types.ts';
 import type { GameRandom } from '../../core/engine/random.ts';
@@ -30,6 +33,13 @@ export interface AmongLegendsState {
   /** Number of switches of the Double Faces already announced. */
   switches: number;
   alerts: Map<string, Alert>;
+  /** Server time when the host said the game was over. */
+  endedAt: number | null;
+  /** Debrief: what the host read on the end screen, and the guesses of each voter. */
+  stats: GameStats | null;
+  ballots: Map<string, Record<string, RoleId>>;
+  /** Results: points of every player. */
+  scores: Map<string, PlayerScore>;
 }
 
 type Ctx = GameContext<AmongLegendsContract>;
@@ -97,6 +107,39 @@ function scheduleSwitch(state: AmongLegendsState, ctx: Ctx): void {
   ctx.schedule('switch', at - ctx.now());
 }
 
+/** Mode of every Double Face (Chameleon turned into one included) when the game ended. */
+function modesAtEnd(state: AmongLegendsState): Record<string, TwoFaceMode> {
+  const elapsed = state.endedAt! - state.startedAt!;
+  const modes: Record<string, TwoFaceMode> = {};
+  for (const id of state.roles.keys()) {
+    const start = state.twoFaceStart.get(id);
+    if (currentRole(state, id) === 'two-face' && start !== undefined) {
+      modes[id] = twoFaceModeAt(start, elapsed);
+    }
+  }
+  return modes;
+}
+
+/** Everybody but the player: the ones they guess the role of. */
+function othersOf(state: AmongLegendsState, playerId: string): string[] {
+  return [...state.teams.keys()].filter((id) => id !== playerId);
+}
+
+/** Debrief → results, provided the stats are in. Ballots missing are simply ignored. */
+function openResults(state: AmongLegendsState, ctx: Ctx): void {
+  const teams = Object.fromEntries(state.teams) as Record<string, Team>;
+  const scores = computeScores({
+    teams,
+    roles: Object.fromEntries(state.roles),
+    revealed: Object.fromEntries(state.chameleonRole),
+    modes: modesAtEnd(state),
+    stats: state.stats!,
+    ballots: Object.fromEntries(state.ballots),
+  });
+  state.scores = new Map(Object.entries(scores));
+  ctx.goto('results');
+}
+
 function teamsComplete(state: AmongLegendsState): boolean {
   return (
     membersOf(state, 'blue').length === TEAM_SIZE && membersOf(state, 'red').length === TEAM_SIZE
@@ -120,6 +163,10 @@ export const amongLegendsGame = defineGame({
       startedAt: null,
       switches: 0,
       alerts: new Map(),
+      endedAt: null,
+      stats: null,
+      ballots: new Map(),
+      scores: new Map(),
     };
   },
   initialPhase: 'teams',
@@ -164,7 +211,7 @@ export const amongLegendsGame = defineGame({
     },
     playing: {
       actions: ['end'],
-      next: [],
+      next: ['debrief'],
       enter(state, ctx) {
         state.startedAt = ctx.now();
         scheduleSwitch(state, ctx);
@@ -174,8 +221,8 @@ export const amongLegendsGame = defineGame({
       },
       on: {
         end(state, ctx) {
-          // Scores come with the end-of-game form and the votes (next step of the game).
-          ctx.end([...state.roles.keys()].map((playerId) => ({ playerId, score: 0 })));
+          state.endedAt = ctx.now();
+          ctx.goto('debrief');
         },
       },
       timer(state, ctx, id) {
@@ -188,6 +235,53 @@ export const amongLegendsGame = defineGame({
           if (currentRole(state, playerId) === 'two-face') alert(state, playerId, 'twoFace');
         }
         scheduleSwitch(state, ctx);
+      },
+    },
+    debrief: {
+      actions: ['submitStats', 'vote', 'reveal'],
+      next: ['results'],
+      on: {
+        submitStats(state, ctx, _from, stats) {
+          const teams = state.size === 10 ? (['blue', 'red'] as const) : (['blue'] as const);
+          if (Object.keys(stats.teams).some((team) => !teams.some((t) => t === team))) {
+            ctx.reject('STATS_INVALID');
+          }
+          for (const team of teams) {
+            const answers = stats.teams[team];
+            if (!answers) return ctx.reject('STATS_INVALID');
+            const error = validateTeamStats(answers, membersOf(state, team));
+            if (error) ctx.reject(error);
+          }
+          state.stats = stats;
+        },
+        vote(state, ctx, from, { guesses }) {
+          if (state.ballots.has(from)) ctx.reject('ALREADY_VOTED');
+          const targets = othersOf(state, from);
+          const complete =
+            Object.keys(guesses).length === targets.length &&
+            targets.every((id) => guesses[id] !== undefined);
+          if (!complete) ctx.reject('BAD_VOTE');
+          if (Object.values(guesses).some((role) => !state.selected.includes(role))) {
+            ctx.reject('BAD_VOTE');
+          }
+          state.ballots.set(from, guesses);
+        },
+        reveal(state, ctx) {
+          if (!state.stats) ctx.reject('STATS_MISSING');
+          if (ctx.players.awaited().some((id) => !state.ballots.has(id))) {
+            ctx.reject('VOTES_MISSING');
+          }
+          openResults(state, ctx);
+        },
+      },
+    },
+    results: {
+      actions: ['finish'],
+      next: [],
+      on: {
+        finish(state, ctx) {
+          ctx.end([...state.scores].map(([playerId, { total }]) => ({ playerId, score: total })));
+        },
       },
     },
   },
@@ -207,6 +301,42 @@ export const amongLegendsGame = defineGame({
         phase: 'briefing',
         twoFaceStart: state.twoFaceStart.get(viewer) ?? null,
         read: [...state.read],
+      };
+    }
+    if (ctx.phase === 'debrief') {
+      return {
+        ...common,
+        phase: 'debrief',
+        voted: [...state.ballots.keys()],
+        myGuesses: state.ballots.get(viewer) ?? null,
+        statsSent: state.stats !== null,
+        stats: state.stats,
+      };
+    }
+    if (ctx.phase === 'results') {
+      const modes = modesAtEnd(state);
+      const players: Record<string, ResultPlayer> = {};
+      for (const [id, role] of state.roles) {
+        const { total, lines } = state.scores.get(id)!;
+        players[id] = {
+          total,
+          lines,
+          role,
+          revealedRole: state.chameleonRole.get(id) ?? null,
+          mode: modes[id] ?? null,
+          foundBy: [...state.ballots]
+            .filter(([voter, ballot]) => voter !== id && ballot[id] === role)
+            .map(([voter]) => voter),
+          voted: state.ballots.has(id),
+        };
+      }
+      return {
+        ...common,
+        phase: 'results',
+        winner: state.stats!.winner,
+        minutes: state.stats!.minutes,
+        players,
+        myGuesses: state.ballots.get(viewer) ?? null,
       };
     }
     const startedAt = state.startedAt!;
@@ -237,5 +367,7 @@ export const amongLegendsGame = defineGame({
   onSkip(state, ctx) {
     // "Passer à la suite" during the briefing: the League of Legends game has started.
     if (ctx.phase === 'briefing') ctx.goto('playing');
+    // During the debrief: show the results without waiting for the missing votes.
+    if (ctx.phase === 'debrief' && state.stats) openResults(state, ctx);
   },
 });

@@ -97,7 +97,7 @@ export function PlayingScreen({ view, isHost, act }: ScreenProps<'playing'>) {
       {confirming && (
         <ConfirmDialog
           title="La partie est terminée ?"
-          message="Le chrono s'arrête pour tout le monde."
+          message="Le chrono s'arrête pour tout le monde. Chacun votera, et tu saisiras les statistiques de la partie."
           confirmLabel="Oui, terminée"
           onConfirm={() => void end()}
           onCancel={() => setConfirming(false)}

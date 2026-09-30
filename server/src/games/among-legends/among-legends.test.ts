@@ -5,7 +5,8 @@ import {
   TWO_FACE_PERIOD_MS,
   twoFaceModeAt,
 } from '@mini-jeux/shared/games/among-legends-roles';
-import type { RoleId } from '@mini-jeux/shared/games/among-legends-roles';
+import type { RoleId, Team } from '@mini-jeux/shared/games/among-legends-roles';
+import type { TeamStats } from '@mini-jeux/shared/games/among-legends-scoring';
 import { createHarness } from '../../core/engine/harness.ts';
 import { seededRandom } from '../../core/engine/random.ts';
 import { validateGameDefinition } from '../../core/engine/validate.ts';
@@ -220,11 +221,301 @@ describe('Among Legends: during the game', () => {
     expect(view(g!, chameleon, 'playing').alert).toEqual({ seq: 2, kind: 'twoFace' });
   });
 
-  it('ends when the host says the League of Legends game is over', () => {
+  it('opens the debrief when the host says the League of Legends game is over', () => {
     const g = play();
     g.act('alice', 'start');
     expect(g.act('bob', 'end')).toEqual({ ok: false, error: 'NOT_HOST' });
+    expect(g.act('alice', 'end')).toEqual({ ok: true });
+    view(g, 'bob', 'debrief');
+    expect(g.ended).toBe(false);
+  });
+});
+
+describe('Among Legends: debrief and results', () => {
+  const KEPT: RoleId[] = ['impostor', 'superhero', 'snake', 'crook', 'pacifist'];
+
+  /** A valid set of answers about a team of five. */
+  const stats = (team: readonly string[], override: Partial<TeamStats> = {}): TeamStats => ({
+    mostKills: [team[0]!],
+    fewestKills: [team[4]!],
+    zeroKills: [],
+    mostDeaths: [team[1]!],
+    mostAssists: [team[2]!],
+    mostDamage: [team[0]!],
+    mostDamageTaken: [team[1]!],
+    leastDamageTaken: [team[4]!],
+    ...override,
+  });
+  const send = (g: G, winner: Team = 'blue', minutes = 30) =>
+    g.act('alice', 'submitStats', { winner, minutes, teams: { blue: stats(FIVE) } });
+  const guessesOf = (g: G, voter: string, players = FIVE) =>
+    Object.fromEntries(players.filter((p) => p !== voter).map((p) => [p, roleOf(g, p)]));
+  const everybodyVotes = (g: G) => {
+    for (const p of FIVE) g.act(p, 'vote', { guesses: guessesOf(g, p) });
+  };
+  const started = (roles: RoleId[] = KEPT) => {
+    const g = play(FIVE, roles);
+    g.act('alice', 'start');
+    return g;
+  };
+  const inDebrief = (roles: RoleId[] = KEPT) => {
+    const g = started(roles);
     g.act('alice', 'end');
-    expect(g.ended).toBe(true);
+    return g;
+  };
+  const tenInDebrief = () => {
+    const g = play(TEN, KEPT);
+    for (const p of TEN) g.act(p, 'chooseTeam', { team: TEN.indexOf(p) < 5 ? 'blue' : 'red' });
+    g.act('alice', 'confirmTeams');
+    g.act('alice', 'start');
+    g.act('alice', 'end');
+    return g;
+  };
+
+  it('does not reveal any role before the results', () => {
+    const v = view(inDebrief(), 'bob', 'debrief');
+    expect(Object.keys(v).sort()).toEqual(
+      [
+        'myGuesses',
+        'phase',
+        'role',
+        'roles',
+        'size',
+        'stats',
+        'statsSent',
+        'teams',
+        'voted',
+      ].sort(),
+    );
+  });
+
+  it('stops the alarms of the game', () => {
+    const g = started(['impostor', 'two-face', 'superhero', 'snake', 'crook']);
+    g.advance(3 * MINUTE);
+    g.act('alice', 'end');
+    g.advance(30 * MINUTE);
+    view(g, 'bob', 'debrief');
+  });
+
+  describe('stats', () => {
+    it('are sent by the host only, and can be corrected', () => {
+      const g = inDebrief();
+      const payload = { winner: 'blue', minutes: 30, teams: { blue: stats(FIVE) } } as const;
+      expect(g.act('bob', 'submitStats', payload)).toEqual({ ok: false, error: 'NOT_HOST' });
+      expect(send(g)).toEqual({ ok: true });
+      expect(view(g, 'bob', 'debrief')).toMatchObject({ statsSent: true, stats: { minutes: 30 } });
+      expect(send(g, 'red', 45)).toEqual({ ok: true });
+      expect(view(g, 'bob', 'debrief').stats).toMatchObject({ winner: 'red', minutes: 45 });
+    });
+
+    it('are refused when incoherent, and then not kept', () => {
+      const g = inDebrief();
+      const attempt = (override: Partial<TeamStats>) =>
+        g.act('alice', 'submitStats', {
+          winner: 'blue',
+          minutes: 30,
+          teams: { blue: stats(FIVE, override) },
+        });
+      expect(attempt({ mostKills: ['zed'] })).toEqual({ ok: false, error: 'STATS_INVALID' });
+      expect(attempt({ mostAssists: [] })).toEqual({ ok: false, error: 'STATS_INCOMPLETE' });
+      expect(attempt({ zeroKills: ['alice'] })).toEqual({ ok: false, error: 'STATS_ZERO_KILLS' });
+      expect(attempt({ mostKills: ['alice', 'erin'] })).toEqual({
+        ok: false,
+        error: 'STATS_OVERLAP',
+      });
+      expect(view(g, 'alice', 'debrief').statsSent).toBe(false);
+    });
+
+    it('with one team, refuse a second team', () => {
+      const g = inDebrief();
+      expect(
+        g.act('alice', 'submitStats', {
+          winner: 'blue',
+          minutes: 30,
+          teams: { blue: stats(FIVE), red: stats(FIVE) },
+        }),
+      ).toEqual({ ok: false, error: 'STATS_INVALID' });
+    });
+
+    it('with two teams, need both, each about its own players', () => {
+      const g = tenInDebrief();
+      const blue = TEN.slice(0, 5);
+      const red = TEN.slice(5);
+      const submit = (teams: { blue: TeamStats; red?: TeamStats }) =>
+        g.act('alice', 'submitStats', { winner: 'red', minutes: 30, teams });
+      expect(submit({ blue: stats(blue) })).toEqual({ ok: false, error: 'STATS_INVALID' });
+      expect(submit({ blue: stats(blue), red: stats(blue) })).toEqual({
+        ok: false,
+        error: 'STATS_INVALID',
+      });
+      expect(submit({ blue: stats(blue), red: stats(red) })).toEqual({ ok: true });
+    });
+
+    it('are refused outside the debrief', () => {
+      expect(send(started())).toEqual({ ok: false, error: 'WRONG_PHASE' });
+    });
+  });
+
+  describe('votes', () => {
+    it('need a guess for every other player, among the roles in game', () => {
+      const g = inDebrief();
+      const all = guessesOf(g, 'bob');
+      const { alice: _alice, ...missing } = all;
+      const vote = (guesses: Record<string, RoleId>) => g.act('bob', 'vote', { guesses });
+      expect(vote(missing)).toEqual({ ok: false, error: 'BAD_VOTE' });
+      expect(vote({ ...all, bob: 'snake' })).toEqual({ ok: false, error: 'BAD_VOTE' });
+      expect(vote({ ...all, zed: 'snake' })).toEqual({ ok: false, error: 'BAD_VOTE' });
+      // The Droïde is not among the roles kept.
+      expect(vote({ ...all, alice: 'droid' })).toEqual({ ok: false, error: 'BAD_VOTE' });
+      expect(view(g, 'bob', 'debrief').myGuesses).toBeNull();
+    });
+
+    it('are final, and shown as voted to everybody', () => {
+      const g = inDebrief();
+      expect(g.act('bob', 'vote', { guesses: guessesOf(g, 'bob') })).toEqual({ ok: true });
+      expect(g.act('bob', 'vote', { guesses: guessesOf(g, 'bob') })).toEqual({
+        ok: false,
+        error: 'ALREADY_VOTED',
+      });
+      expect(view(g, 'carol', 'debrief').voted).toEqual(['bob']);
+      expect(view(g, 'carol', 'debrief').myGuesses).toBeNull();
+      expect(view(g, 'bob', 'debrief').myGuesses).toEqual(guessesOf(g, 'bob'));
+    });
+
+    it('with ten players, guess the other team too: nine guesses', () => {
+      const g = tenInDebrief();
+      expect(Object.keys(guessesOf(g, 'fanny', TEN))).toHaveLength(9);
+      expect(g.act('fanny', 'vote', { guesses: guessesOf(g, 'fanny', TEN) })).toEqual({ ok: true });
+      expect(g.act('gabin', 'vote', { guesses: guessesOf(g, 'gabin') })).toEqual({
+        ok: false,
+        error: 'BAD_VOTE',
+      });
+    });
+  });
+
+  describe('results', () => {
+    it('wait for the stats and for the votes', () => {
+      const g = inDebrief();
+      expect(g.act('alice', 'reveal')).toEqual({ ok: false, error: 'STATS_MISSING' });
+      send(g);
+      expect(g.act('alice', 'reveal')).toEqual({ ok: false, error: 'VOTES_MISSING' });
+      expect(g.act('bob', 'reveal')).toEqual({ ok: false, error: 'NOT_HOST' });
+      everybodyVotes(g);
+      expect(g.act('alice', 'reveal')).toEqual({ ok: true });
+      view(g, 'bob', 'results');
+    });
+
+    it('no longer wait for a player disconnected for a minute', () => {
+      const g = inDebrief();
+      send(g);
+      for (const p of FIVE.filter((x) => x !== 'erin')) {
+        g.act(p, 'vote', { guesses: guessesOf(g, p) });
+      }
+      g.disconnect('erin');
+      expect(g.act('alice', 'reveal')).toEqual({ ok: false, error: 'VOTES_MISSING' });
+      g.advance(60_000);
+      expect(g.act('alice', 'reveal')).toEqual({ ok: true });
+      expect(view(g, 'alice', 'results').players.erin!.voted).toBe(false);
+    });
+
+    it('"Passer à la suite" shows them without the missing votes, but never without stats', () => {
+      const g = inDebrief();
+      g.skip();
+      view(g, 'alice', 'debrief');
+      send(g);
+      g.act('bob', 'vote', { guesses: guessesOf(g, 'bob') });
+      g.skip();
+      const v = view(g, 'alice', 'results');
+      expect(v.players.bob!.voted).toBe(true);
+      expect(v.players.carol!.voted).toBe(false);
+      // Only bob voted: he is the only one who can have found carol's role.
+      expect(v.players.carol!.foundBy).toEqual(['bob']);
+    });
+
+    it('reveal every role, the outcome and the points, computed by the rules', () => {
+      const g = inDebrief();
+      send(g, 'blue', 30);
+      everybodyVotes(g);
+      g.act('alice', 'reveal');
+      const v = view(g, 'dave', 'results');
+      expect(v).toMatchObject({ winner: 'blue', minutes: 30, myGuesses: guessesOf(g, 'dave') });
+      // Team stats: alice most kills and damage, bob most deaths, carol most assists, erin fewest
+      // kills. Victory. Everybody guessed everything: +4 for the guesses, −4 for having been
+      // found (none for the SuperHéro).
+      const bonus: Record<string, Record<string, number>> = {
+        superhero: { alice: 2, carol: 1 },
+        snake: { alice: 1, bob: 1 },
+        pacifist: { erin: 1 },
+      };
+      const base = { impostor: -3, superhero: 2, snake: 2, crook: 2, pacifist: 2 };
+      for (const p of FIVE) {
+        const role = roleOf(g, p) as keyof typeof base;
+        expect(v.players[p]!.role).toBe(role);
+        expect(v.players[p]!.foundBy).toHaveLength(4);
+        const expected = base[role] + (bonus[role]?.[p] ?? 0) + 4 - (role === 'superhero' ? 0 : 4);
+        expect(v.players[p]!.total).toBe(expected);
+      }
+    });
+
+    it('give the Double Face its mode at the end of the game, by the clock of the site', () => {
+      const roles: RoleId[] = ['impostor', 'two-face', 'superhero', 'snake', 'crook'];
+      const g = play(FIVE, roles);
+      const twoFace = holderOf(g, 'two-face');
+      const start = view(g, twoFace, 'briefing').twoFaceStart!;
+      g.act('alice', 'start');
+      g.advance(8 * MINUTE); // one switch happened
+      g.act('alice', 'end');
+      const finalMode = twoFaceModeAt(start, 8 * MINUTE);
+      send(g, finalMode === 'ally' ? 'blue' : 'red', 8);
+      everybodyVotes(g);
+      g.act('alice', 'reveal');
+      const player = view(g, 'alice', 'results').players[twoFace]!;
+      expect(player.mode).toBe(finalMode);
+      expect(player.lines.find((l) => l.rule === 'twoFaceMatch')?.points).toBe(2);
+    });
+
+    it('a Chameleon has no new role before 15 minutes, and one after', () => {
+      const selected: RoleId[] = [
+        'impostor',
+        'superhero',
+        'snake',
+        'crook',
+        'pacifist',
+        'chameleon',
+      ];
+      const chameleonGame = (minutes: number) => {
+        const g = withRole('chameleon', selected);
+        g.act('alice', 'start');
+        g.advance(minutes * MINUTE);
+        g.act('alice', 'end');
+        send(g, 'blue', minutes);
+        everybodyVotes(g);
+        g.act('alice', 'reveal');
+        return view(g, 'alice', 'results').players[holderOf(g, 'chameleon')]!;
+      };
+      const early = chameleonGame(10);
+      expect(early.revealedRole).toBeNull();
+      expect(early.lines.map((l) => l.rule).sort()).toEqual(['found', 'guessRight']);
+      const late = chameleonGame(20);
+      expect(late.revealedRole).not.toBeNull();
+      expect(late.lines.length).toBeGreaterThan(2);
+    });
+
+    it('end the game with the scores, ranked by the core', () => {
+      const g = inDebrief();
+      send(g);
+      everybodyVotes(g);
+      g.act('alice', 'reveal');
+      const results = view(g, 'alice', 'results');
+      expect(g.act('bob', 'finish')).toEqual({ ok: false, error: 'NOT_HOST' });
+      expect(g.act('alice', 'finish')).toEqual({ ok: true });
+      expect(g.ended).toBe(true);
+      const ranking = g.ranking!;
+      expect(ranking).toHaveLength(5);
+      for (const entry of ranking) {
+        expect(entry.score).toBe(results.players[entry.playerId]!.total);
+      }
+      expect(ranking[0]!.rank).toBe(1);
+    });
   });
 });
