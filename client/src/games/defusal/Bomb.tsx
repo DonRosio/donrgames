@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import {
   COLOR_NAMES,
@@ -115,33 +115,60 @@ function BigButton({ module, index, act }: { module: Of<'button'>; index: number
     if (isDown && !event.repeat) press();
     if (!isDown) release();
   };
+  // The cover is a purely visual and local thing: the button cannot be pressed under it.
+  const [open, setOpen] = useState(false);
+  const lifted = open && !module.solved;
   return (
     <div className={styles.buttonModule}>
+      <div className={styles.pedestalRow}>
+        <div className={styles.pedestal}>
+          <div className={styles.buttonPlate}>
+            <button
+              type="button"
+              className={styles.bigButton}
+              style={{ background: PAINT[module.color] }}
+              data-dark={module.color === 'blue' || module.color === 'red' ? '' : undefined}
+              disabled={module.solved || !lifted}
+              aria-label={`Bouton ${COLOR_NAMES[module.color]} « ${module.label} »`}
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                press();
+              }}
+              onPointerUp={release}
+              onPointerCancel={release}
+              onLostPointerCapture={release}
+              onKeyDown={(event) => onKey(event, true)}
+              onKeyUp={(event) => onKey(event, false)}
+            >
+              {module.label}
+            </button>
+          </div>
+          <div
+            className={lifted ? `${styles.cover} ${styles.coverLifted}` : styles.cover}
+            aria-hidden="true"
+          />
+        </div>
+        <span
+          className={styles.strip}
+          style={module.strip ? { background: PAINT[module.strip] } : undefined}
+          aria-label={module.strip ? `Bande ${COLOR_NAMES[module.strip]}` : 'Bande éteinte'}
+          role="img"
+        />
+      </div>
       <button
         type="button"
-        className={styles.bigButton}
-        style={{ background: PAINT[module.color] }}
-        data-dark={module.color === 'blue' || module.color === 'red' ? '' : undefined}
+        className={`btn btn-small ${styles.openCover}`}
         disabled={module.solved}
-        aria-label={`Bouton ${COLOR_NAMES[module.color]} « ${module.label} »`}
-        onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId);
-          press();
+        aria-expanded={lifted}
+        aria-label={lifted ? 'Fermer le capuchon' : 'Ouvrir le capuchon'}
+        onClick={() => {
+          // Closing the cover on a button still held lets go of it first.
+          if (lifted) release();
+          setOpen(!open);
         }}
-        onPointerUp={release}
-        onPointerCancel={release}
-        onLostPointerCapture={release}
-        onKeyDown={(event) => onKey(event, true)}
-        onKeyUp={(event) => onKey(event, false)}
       >
-        {module.label}
+        {lifted ? 'FERMER' : 'OUVRIR'}
       </button>
-      <span
-        className={styles.strip}
-        style={module.strip ? { background: PAINT[module.strip] } : undefined}
-        aria-label={module.strip ? `Bande ${COLOR_NAMES[module.strip]}` : 'Bande éteinte'}
-        role="img"
-      />
     </div>
   );
 }

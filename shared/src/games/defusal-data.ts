@@ -513,7 +513,7 @@ export function conditionText(c: Condition): string {
     case 'buttonColor':
       return `le bouton est ${COLOR_NAMES[c.color]}`;
     case 'buttonLabel':
-      return `le bouton indique « ${c.label} »`;
+      return `le bouton indique « ${c.label.toUpperCase()} »`;
     case 'purgeWord':
       return `le mot affiché est ${c.word}`;
   }

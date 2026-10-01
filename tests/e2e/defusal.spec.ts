@@ -128,6 +128,11 @@ test('Désamorçage with four players: roles, separate manuals, six modules, fou
       if (await button.count()) {
         // Holding the big button lights its strip up (released at once, right or wrong).
         await button.scrollIntoViewIfNeeded();
+        // Under its cover the button cannot be pressed: open the cover first.
+        await expect(button).toBeDisabled();
+        await defuser.page.getByRole('button', { name: 'Ouvrir le capuchon' }).click();
+        await expect(button).toBeEnabled();
+        await defuser.page.waitForTimeout(500);
         const box = (await button.boundingBox())!;
         await defuser.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await defuser.page.mouse.down();
