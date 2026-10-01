@@ -6,8 +6,12 @@ import type {
   RoundSummary,
 } from '@mini-jeux/shared/games/defusal';
 import {
+  FREQUENCIES,
+  MEMORY_STAGES,
+  PURGE_WORDS,
   ROUNDS,
   SPEED_PER_STRIKE,
+  VALVES,
   formatClock,
   remainingAt,
 } from '@mini-jeux/shared/games/defusal-data';
@@ -18,6 +22,15 @@ import { dealPages, generateBomb } from './bomb.ts';
 import type { Bomb } from './bomb.ts';
 import { HOLD_MS, RELEASE_TOLERANCE_MS, step } from './modules.ts';
 import type { ModuleState } from './modules.ts';
+import { drawMemoryScreen, memoryExpected, simonExpected } from './modules-more.ts';
+import {
+  PURGE_FIRST_MIN_MS,
+  PURGE_FIRST_SPAN_MS,
+  PURGE_SLEEP_MIN_MS,
+  PURGE_SLEEP_SPAN_MS,
+  PURGE_WINDOW_MS,
+  purgeAnswer,
+} from './purge.ts';
 
 export interface DefusalState {
   /** Who defuses each bomb, in order: everybody once. */
@@ -85,6 +98,31 @@ function solve(state: DefusalState, ctx: Ctx, module: ModuleState): void {
   if (state.bomb!.modules.every((m) => m.solved)) finish(state, ctx, 'defused');
 }
 
+/** The purge wakes up after a while: a timer `purgeOn`, then `purgeOff-<n>` closes the window. */
+function schedulePurge(state: DefusalState, ctx: Ctx, first: boolean): void {
+  const delay = first
+    ? PURGE_FIRST_MIN_MS + ctx.random.int(PURGE_FIRST_SPAN_MS)
+    : PURGE_SLEEP_MIN_MS + ctx.random.int(PURGE_SLEEP_SPAN_MS);
+  ctx.schedule('purgeOn', delay);
+}
+
+function wakePurge(state: DefusalState, ctx: Ctx): void {
+  const purge = state.bomb!.purge;
+  purge.serial++;
+  purge.active = true;
+  purge.word = ctx.random.pick(PURGE_WORDS);
+  purge.until = ctx.now() + PURGE_WINDOW_MS;
+  ctx.schedule(`purgeOff-${purge.serial}`, PURGE_WINDOW_MS);
+}
+
+function calmPurge(state: DefusalState, ctx: Ctx): void {
+  const purge = state.bomb!.purge;
+  purge.active = false;
+  purge.word = null;
+  purge.until = null;
+  schedulePurge(state, ctx, false);
+}
+
 /** The module the defuser acts on: it must exist, be of that kind and not be solved yet. */
 function moduleOf<K extends ModuleState['kind']>(
   state: DefusalState,
@@ -134,6 +172,29 @@ function moduleView(module: ModuleState): ModuleView {
         target: module.target,
         solved: module.solved,
       };
+    case 'simon':
+      return {
+        kind: 'simon',
+        flashes: module.sequence.slice(0, module.stage + 1),
+        progress: module.progress,
+        stage: module.stage,
+        stages: module.sequence.length,
+        plays: module.plays,
+        solved: module.solved,
+      };
+    case 'morse':
+      return { kind: 'morse', signal: module.signal, tuned: module.tuned, solved: module.solved };
+    case 'memory':
+      return {
+        kind: 'memory',
+        display: module.display,
+        labels: module.labels,
+        stage: module.stage,
+        stages: MEMORY_STAGES,
+        solved: module.solved,
+      };
+    case 'password':
+      return { kind: 'password', wheels: module.wheels, solved: module.solved };
   }
 }
 
@@ -184,11 +245,24 @@ export const defusalGame = defineGame({
       },
     },
     defusing: {
-      actions: ['cut', 'buttonDown', 'buttonUp', 'press', 'move'],
+      actions: [
+        'cut',
+        'buttonDown',
+        'buttonUp',
+        'press',
+        'move',
+        'simon',
+        'tune',
+        'transmit',
+        'memory',
+        'password',
+        'purge',
+      ],
       next: ['result'],
       enter(state, ctx) {
         state.clock = { remaining: state.minutes * 60_000, since: ctx.now(), speed: 1 };
         scheduleExplosion(state, ctx);
+        schedulePurge(state, ctx, true);
       },
       on: {
         cut(state, ctx, from, { module: index, wire }) {
@@ -227,9 +301,83 @@ export const defusalGame = defineGame({
           module.position = next;
           if (next === module.target) solve(state, ctx, module);
         },
+        simon(state, ctx, from, { module: index, color }) {
+          const module = moduleOf(state, ctx, from, index, 'simon');
+          const flash = module.sequence[module.progress]!;
+          const expected = simonExpected(module.rows, flash, state.strikes, state.bomb!.edgework);
+          if (color !== expected) {
+            module.progress = 0;
+            module.plays++;
+            return strike(state, ctx);
+          }
+          module.progress++;
+          if (module.progress < module.stage + 1) return;
+          module.stage++;
+          module.progress = 0;
+          module.plays++;
+          if (module.stage === module.sequence.length) solve(state, ctx, module);
+        },
+        tune(state, ctx, from, { module: index, direction }) {
+          const module = moduleOf(state, ctx, from, index, 'morse');
+          const next = module.tuned + (direction === 'up' ? 1 : -1);
+          if (next >= 0 && next < FREQUENCIES.length) module.tuned = next;
+        },
+        transmit(state, ctx, from, { module: index }) {
+          const module = moduleOf(state, ctx, from, index, 'morse');
+          if (module.tuned === module.target) solve(state, ctx, module);
+          else strike(state, ctx);
+        },
+        memory(state, ctx, from, { module: index, position }) {
+          const module = moduleOf(state, ctx, from, index, 'memory');
+          const expected = memoryExpected(
+            module.stages,
+            module.stage,
+            module.display,
+            module.labels,
+            module.pressed,
+          );
+          if (position !== expected) {
+            // An error starts the five stages over, with a new screen.
+            module.stage = 0;
+            module.pressed = [];
+            Object.assign(module, drawMemoryScreen(ctx.random));
+            return strike(state, ctx);
+          }
+          module.pressed.push({ position, label: module.labels[position]! });
+          module.stage++;
+          if (module.stage === MEMORY_STAGES) return solve(state, ctx, module);
+          Object.assign(module, drawMemoryScreen(ctx.random));
+        },
+        password(state, ctx, from, { module: index, word }) {
+          const module = moduleOf(state, ctx, from, index, 'password');
+          if (word === module.target) solve(state, ctx, module);
+          else strike(state, ctx);
+        },
+        purge(state, ctx, from, { valve }) {
+          if (from !== defuser(state)) ctx.reject('NOT_DEFUSER');
+          const purge = state.bomb!.purge;
+          if (!purge.active) ctx.reject('BAD_MODULE');
+          const manual = state.bomb!;
+          const answer = purgeAnswer(
+            purge.table,
+            purge.rules,
+            purge.otherwise,
+            purge.word!,
+            manual.edgework,
+          );
+          if (VALVES[valve] === answer) calmPurge(state, ctx);
+          else strike(state, ctx);
+        },
       },
-      timer(state, ctx) {
-        finish(state, ctx, 'exploded');
+      timer(state, ctx, id) {
+        if (id === 'explosion') return finish(state, ctx, 'exploded');
+        const purge = state.bomb!.purge;
+        if (id === 'purgeOn') return wakePurge(state, ctx);
+        // The window of an activation closed without the right valve: an error.
+        if (id === `purgeOff-${purge.serial}` && purge.active) {
+          calmPurge(state, ctx);
+          strike(state, ctx);
+        }
       },
     },
     result: {
@@ -265,7 +413,15 @@ export const defusalGame = defineGame({
     if (ctx.phase === 'defusing') {
       const isDefuser = viewer === defuser(state);
       const bomb: BombView | null = isDefuser
-        ? { edgework: state.bomb!.edgework, modules: modules.map(moduleView) }
+        ? {
+            edgework: state.bomb!.edgework,
+            modules: modules.map(moduleView),
+            purge: {
+              active: state.bomb!.purge.active,
+              word: state.bomb!.purge.word,
+              until: state.bomb!.purge.until,
+            },
+          }
         : null;
       return {
         ...base,

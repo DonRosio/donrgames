@@ -31,6 +31,19 @@ export const defusalContract = defineContract({
     move: {
       payload: z.strictObject({ module, direction: z.enum(['up', 'right', 'down', 'left']) }),
     },
+    /** The colour the defuser presses on the colours module. */
+    simon: {
+      payload: z.strictObject({ module, color: z.enum(['red', 'blue', 'green', 'yellow']) }),
+    },
+    /** Morse: one step of the radio knob, and sending the tuned frequency. */
+    tune: { payload: z.strictObject({ module, direction: z.enum(['down', 'up']) }) },
+    transmit: { payload: z.strictObject({ module }) },
+    /** Memory: the button pressed, by position (0 = leftmost). */
+    memory: { payload: z.strictObject({ module, position: z.number().int().min(0).max(3) }) },
+    /** Password: the five letters shown on the wheels. */
+    password: { payload: z.strictObject({ module, word: z.string().regex(/^[A-Z]{5}$/) }) },
+    /** Purge: the valve opened (0 to 3: red, blue, yellow, white). */
+    purge: { payload: z.strictObject({ valve: z.number().int().min(0).max(3) }) },
     /** Result → next bomb, or the end of the game after the last one. */
     next: { payload: z.strictObject({}), hostOnly: true },
   },

@@ -27,6 +27,8 @@ export interface Facts {
   edgework: Edgework;
   wires?: readonly WireColor[];
   button?: { color: ButtonColor; label: ButtonLabel };
+  /** The word the purge shows while it is active. */
+  purgeWord?: string;
 }
 
 export function generateEdgework(random: GameRandom): Edgework {
@@ -123,6 +125,8 @@ export function holds(c: Condition, facts: Facts): boolean {
       return facts.button?.color === c.color;
     case 'buttonLabel':
       return facts.button?.label === c.label;
+    case 'purgeWord':
+      return facts.purgeWord === c.word;
   }
 }
 

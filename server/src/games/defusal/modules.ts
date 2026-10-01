@@ -27,10 +27,11 @@ import type {
   WireTarget,
 } from '@mini-jeux/shared/games/defusal-data';
 import type { GameRandom } from '../../core/engine/random.ts';
+import type { MoreModuleState } from './modules-more.ts';
 import { chance, edgeworkCondition, firstApplying, ruleKey, sample } from './rules.ts';
 
 /** A module as the server keeps it, with its solution. */
-export type ModuleState =
+type BasicModuleState =
   | { kind: 'wires'; wires: WireColor[]; cut: number[]; solution: number; solved: boolean }
   | {
       kind: 'button';
@@ -60,6 +61,9 @@ export type ModuleState =
       target: number;
       solved: boolean;
     };
+
+/** Every module as the server keeps it. */
+export type ModuleState = BasicModuleState | MoreModuleState;
 
 /** A module and the two sheets of the manual that describe it (always for two experts). */
 export interface Generated {

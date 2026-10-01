@@ -152,6 +152,130 @@ export const DIRECTION_BITS: Readonly<Record<Direction, number>> = {
 };
 
 // ---------------------------------------------------------------------------------------------
+// Colours sequence
+
+export const SIMON_COLORS = ['red', 'blue', 'green', 'yellow'] as const;
+export type SimonColor = (typeof SIMON_COLORS)[number];
+
+/** What to press for each colour that flashes. */
+export type SimonMap = Record<SimonColor, SimonColor>;
+
+/** How to answer after this many errors, with and without a vowel in the serial number. */
+export interface SimonRow {
+  strikes: number;
+  vowel: SimonMap;
+  noVowel: SimonMap;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Morse
+
+/** The international code: this is a real, fixed alphabet. */
+export const MORSE: Readonly<Record<string, string>> = {
+  A: '.-',
+  B: '-...',
+  C: '-.-.',
+  D: '-..',
+  E: '.',
+  F: '..-.',
+  G: '--.',
+  H: '....',
+  I: '..',
+  J: '.---',
+  K: '-.-',
+  L: '.-..',
+  M: '--',
+  N: '-.',
+  O: '---',
+  P: '.--.',
+  Q: '--.-',
+  R: '.-.',
+  S: '...',
+  T: '-',
+  U: '..-',
+  V: '...-',
+  W: '.--',
+  X: '-..-',
+  Y: '-.--',
+  Z: '--..',
+};
+
+/** Frequencies of the radio, in MHz: the knob goes one step at a time. */
+export const FREQUENCIES = [
+  '3.505',
+  '3.515',
+  '3.522',
+  '3.532',
+  '3.535',
+  '3.542',
+  '3.545',
+  '3.552',
+  '3.555',
+  '3.565',
+  '3.572',
+  '3.575',
+  '3.582',
+  '3.592',
+  '3.595',
+  '3.600',
+] as const;
+
+/** Duration of a dot, in ms. A dash is three dots; the gaps are one, three and seven dots. */
+export const MORSE_UNIT_MS = 320;
+
+// ---------------------------------------------------------------------------------------------
+// Memory
+
+export const MEMORY_STAGES = 5;
+export const MEMORY_BUTTONS = 4;
+
+/** What to press: a position, a label, or what an earlier stage pressed (positions from 1). */
+export type MemoryRule =
+  | { k: 'position'; n: number }
+  | { k: 'label'; n: number }
+  | { k: 'samePosition'; stage: number }
+  | { k: 'sameLabel'; stage: number };
+
+export interface MemoryStage {
+  /** Number of the stage, from 1. */
+  stage: number;
+  /** For each number the screen can show (1 to 4), what to press. */
+  rules: Record<number, MemoryRule>;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Password
+
+export const PASSWORD_LENGTH = 5;
+export const PASSWORD_WHEEL_SIZE = 6;
+
+// ---------------------------------------------------------------------------------------------
+// Purge
+
+export const VALVES = ['red', 'blue', 'yellow', 'white'] as const;
+export type Valve = (typeof VALVES)[number];
+
+export const PURGE_WORDS = [
+  'PRESSION',
+  'VAPEUR',
+  'TURBINE',
+  'SOUPAPE',
+  'CIRCUIT',
+  'RELAIS',
+  'FILTRE',
+  'RADIATEUR',
+] as const;
+
+/** After finding the valve in the table, move along the valves (red, blue, yellow, white). */
+export type PurgeShift = 'keep' | 'next' | 'previous';
+
+export function shiftValve(valve: Valve, shift: PurgeShift): Valve {
+  const i = VALVES.indexOf(valve);
+  const moved = shift === 'keep' ? 0 : shift === 'next' ? 1 : -1;
+  return VALVES[(i + moved + VALVES.length) % VALVES.length]!;
+}
+
+// ---------------------------------------------------------------------------------------------
 // Rules of the manual
 
 /** A condition the experts check with what the defuser describes. */
@@ -172,7 +296,8 @@ export type Condition =
   | { k: 'firstWire'; color: WireColor }
   | { k: 'lastWire'; color: WireColor }
   | { k: 'buttonColor'; color: ButtonColor }
-  | { k: 'buttonLabel'; label: ButtonLabel };
+  | { k: 'buttonLabel'; label: ButtonLabel }
+  | { k: 'purgeWord'; word: string };
 
 /** Which wire to cut. Positions count from the top, starting at 1. */
 export type WireTarget =
@@ -215,7 +340,14 @@ export type Page =
     }
   | { kind: 'keypad'; columns: { number: number; glyphs: string[] }[] }
   | { kind: 'mazeIndex'; entries: { markers: [number, number]; maze: number }[] }
-  | { kind: 'mazes'; mazes: Maze[] };
+  | { kind: 'mazes'; mazes: Maze[] }
+  | { kind: 'simon'; rows: SimonRow[] }
+  | { kind: 'morseAlphabet'; letters: { letter: string; code: string }[] }
+  | { kind: 'morseWords'; entries: { word: string; frequency: string }[] }
+  | { kind: 'memory'; stages: MemoryStage[] }
+  | { kind: 'passwordWords'; words: string[] }
+  | { kind: 'purgeWords'; entries: { word: string; valve: Valve }[] }
+  | { kind: 'purgeShift'; rules: Rule<PurgeShift>[]; otherwise: PurgeShift };
 
 export type PageKind = Page['kind'];
 
@@ -226,6 +358,13 @@ export const PAGE_TITLES: Readonly<Record<PageKind, string>> = {
   keypad: 'Symboles',
   mazeIndex: 'Labyrinthe : identification',
   mazes: 'Labyrinthe : plans',
+  simon: 'Séquence de couleurs',
+  morseAlphabet: 'Morse : alphabet',
+  morseWords: 'Morse : fréquences',
+  memory: 'Mémoire',
+  passwordWords: 'Mot de passe : liste',
+  purgeWords: 'Purge : vannes',
+  purgeShift: 'Purge : corrections',
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -249,6 +388,41 @@ export type ModuleView =
       position: number;
       target: number;
       solved: boolean;
+    }
+  | {
+      kind: 'simon';
+      /** The flashes of the current stage, as the module plays them. */
+      flashes: SimonColor[];
+      /** Flashes already answered in this stage. */
+      progress: number;
+      stage: number;
+      stages: number;
+      /** Changes each time the module starts playing the sequence again (stage won, error). */
+      plays: number;
+      solved: boolean;
+    }
+  | {
+      kind: 'morse';
+      /** The word being flashed in a loop, one pattern ("-.-") per letter. */
+      signal: string[];
+      /** Index of the tuned frequency in `FREQUENCIES`. */
+      tuned: number;
+      solved: boolean;
+    }
+  | {
+      kind: 'memory';
+      display: number;
+      /** Labels of the four buttons, from left to right. */
+      labels: number[];
+      stage: number;
+      stages: number;
+      solved: boolean;
+    }
+  | {
+      kind: 'password';
+      /** The six letters of each of the five wheels. */
+      wheels: string[][];
+      solved: boolean;
     };
 
 export type ModuleKind = ModuleView['kind'];
@@ -258,11 +432,26 @@ export const MODULE_NAMES: Readonly<Record<ModuleKind, string>> = {
   button: 'Bouton',
   keypad: 'Symboles',
   maze: 'Labyrinthe',
+  simon: 'Couleurs',
+  morse: 'Morse',
+  memory: 'Mémoire',
+  password: 'Mot de passe',
 };
+
+/** The module to keep an eye on: it wakes up from time to time and must be answered in time. */
+export interface PurgeView {
+  active: boolean;
+  /** The word on its screen while it is active. */
+  word: string | null;
+  /** Server time at which the window closes (an error), while it is active. */
+  until: number | null;
+}
 
 export interface BombView {
   edgework: Edgework;
+  /** Six modules, each to be defused once. */
   modules: ModuleView[];
+  purge: PurgeView;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -325,6 +514,8 @@ export function conditionText(c: Condition): string {
       return `le bouton est ${COLOR_NAMES[c.color]}`;
     case 'buttonLabel':
       return `le bouton indique « ${c.label} »`;
+    case 'purgeWord':
+      return `le mot affiché est ${c.word}`;
   }
 }
 
@@ -348,3 +539,22 @@ export const BUTTON_ACTION_TEXT: Readonly<Record<ButtonAction, string>> = {
   tap: 'appuyez et relâchez aussitôt',
   hold: 'maintenez le bouton enfoncé et suivez la bande lumineuse',
 };
+
+export const PURGE_SHIFT_TEXT: Readonly<Record<PurgeShift, string>> = {
+  keep: 'gardez la vanne trouvée',
+  next: 'prenez la vanne suivante (rouge, bleue, jaune, blanche, puis de nouveau rouge)',
+  previous: 'prenez la vanne précédente (rouge, blanche, jaune, bleue, puis de nouveau rouge)',
+};
+
+export function memoryRuleText(rule: MemoryRule): string {
+  switch (rule.k) {
+    case 'position':
+      return `appuyez sur le bouton en ${rule.n === 1 ? '1re' : `${rule.n}e`} position (en comptant de gauche à droite)`;
+    case 'label':
+      return `appuyez sur le bouton qui porte le chiffre ${rule.n}`;
+    case 'samePosition':
+      return `appuyez sur le bouton à la même position que celui pressé à l'étape ${rule.stage}`;
+    case 'sameLabel':
+      return `appuyez sur le bouton qui porte le même chiffre que celui pressé à l'étape ${rule.stage}`;
+  }
+}

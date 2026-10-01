@@ -12,7 +12,24 @@ test.afterEach(async () => {
 
 const NAMES = ['Alice', 'Bob', 'Carol', 'Dave'];
 
-test('Désamorçage with four players: roles, separate manuals, explosions, four bombs', async ({
+/** A gesture that is certainly wrong, on whichever of these modules the bomb has. */
+async function blowUp(defuser: Player) {
+  const region = (name: string) => defuser.page.getByRole('region', { name, exact: true });
+  // The wheels never start on the right word, and the radio never starts on the right frequency.
+  if (await region('Mot de passe').count()) {
+    await region('Mot de passe').getByRole('button', { name: 'Valider' }).click();
+  } else if (await region('Morse').count()) {
+    await region('Morse').getByRole('button', { name: 'Émettre' }).click();
+  } else {
+    // Cutting every wire cuts a wrong one: there is only one right wire.
+    const wires = region('Fils').getByRole('button');
+    for (let i = 0; i < 6 && (await wires.nth(i).isVisible()); i++) {
+      await wires.nth(i).click();
+    }
+  }
+}
+
+test('Désamorçage with four players: roles, separate manuals, six modules, four bombs', async ({
   browser,
 }) => {
   players = await Promise.all(NAMES.map((name) => openPlayer(browser, name)));
@@ -20,7 +37,7 @@ test('Désamorçage with four players: roles, separate manuals, explosions, four
   const code = await createRoom(alice, 'Désamorçage');
   for (const player of players.slice(1)) await joinRoom(player, code);
 
-  // One error is enough to blow the bomb up: the test hits a wall of the maze on purpose.
+  // One error is enough to blow the bomb up.
   const strikes = alice.page.getByLabel('Erreurs avant explosion');
   await strikes.fill('1');
   await strikes.blur();
@@ -45,38 +62,47 @@ test('Désamorçage with four players: roles, separate manuals, explosions, four
       await player.page.getByRole('button', { name: 'Je suis prêt' }).click();
     }
 
-    // The defuser sees the bomb and no manual; each expert sees their own sheets, not the bomb.
+    // The defuser sees the bomb and no manual: six modules, and the purge asleep.
     for (const player of players) {
       await expect(player.page.getByRole('timer', { name: 'Chrono de la bombe' })).toBeVisible();
+      await expect(player.page.getByText('Modules désamorcés : 0 / 6')).toBeVisible();
     }
-    await expect(defuser.page.getByRole('region', { name: 'Labyrinthe' })).toBeVisible();
-    await expect(defuser.page.getByRole('region', { name: 'Fils' })).toBeVisible();
+    await expect(defuser.page.getByRole('region', { name: 'Purge', exact: true })).toBeVisible();
+    await expect(defuser.page.getByText('AU REPOS')).toBeVisible();
     await expect(defuser.page.locator('article')).toHaveCount(0);
+
+    // Each expert sees their own sheets, not the bomb, and the three manuals are different.
     const experts = players.filter((p) => p !== defuser);
     const manuals: string[] = [];
     for (const expert of experts) {
-      await expect(expert.page.getByRole('region', { name: 'Labyrinthe' })).toHaveCount(0);
+      await expect(expert.page.getByRole('region', { name: 'Purge', exact: true })).toHaveCount(0);
       const sheets = expert.page.locator('article');
-      expect(await sheets.count()).toBeGreaterThanOrEqual(2);
+      expect(await sheets.count()).toBeGreaterThanOrEqual(4);
       manuals.push((await sheets.allTextContents()).join('|'));
     }
     expect(new Set(manuals).size).toBe(3);
 
     if (round === 1) {
-      // Holding the big button lights its strip up (released at once: right or wrong, no matter).
       const button = defuser.page.getByRole('button', { name: /^Bouton / });
-      const box = (await button.boundingBox())!;
-      await defuser.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-      await defuser.page.mouse.down();
-      await expect(defuser.page.getByRole('img', { name: /^Bande (?!éteinte)/ })).toBeVisible();
-      await defuser.page.mouse.up();
+      if (await button.count()) {
+        // Holding the big button lights its strip up (released at once, right or wrong).
+        const box = (await button.boundingBox())!;
+        await defuser.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await defuser.page.mouse.down();
+        await expect(defuser.page.getByRole('img', { name: /^Bande (?!éteinte)/ })).toBeVisible();
+        await defuser.page.mouse.up();
+        // Wrong or right, an error ends this bomb: go to the next one.
+        if (await defuser.page.getByRole('heading', { name: 'BOUM' }).count()) {
+          for (const player of players) {
+            await expect(player.page.getByRole('heading', { name: 'BOUM' })).toBeVisible();
+          }
+          await alice.page.getByRole('button', { name: 'Bombe suivante' }).click();
+          continue;
+        }
+      }
     }
 
-    // Going up from any cell ends against the top edge of the maze: an error, the only one allowed.
-    const up = defuser.page
-      .getByRole('region', { name: 'Labyrinthe' })
-      .getByRole('button', { name: 'Haut' });
-    for (let i = 0; i < 6 && (await up.isVisible()); i++) await up.click();
+    await blowUp(defuser);
     for (const player of players) {
       await expect(player.page.getByRole('heading', { name: 'BOUM' })).toBeVisible();
     }

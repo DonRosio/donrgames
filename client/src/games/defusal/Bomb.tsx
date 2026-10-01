@@ -14,6 +14,7 @@ import type {
 } from '@mini-jeux/shared/games/defusal-data';
 import type { ScreenProps } from './common.tsx';
 import { DOT, MARKER, PAINT, TARGET } from './art.ts';
+import { Memory, Morse, Password, Purge, Simon } from './BombMore.tsx';
 import styles from './defusal.module.css';
 
 type Act = ScreenProps<'defusing'>['act'];
@@ -271,6 +272,10 @@ function ModuleCard({ module, index, act }: { module: ModuleView; index: number;
       {module.kind === 'button' && <BigButton module={module} index={index} act={act} />}
       {module.kind === 'keypad' && <Keypad module={module} index={index} act={act} />}
       {module.kind === 'maze' && <MazeModule module={module} index={index} act={act} />}
+      {module.kind === 'simon' && <Simon module={module} index={index} act={act} />}
+      {module.kind === 'morse' && <Morse module={module} index={index} act={act} />}
+      {module.kind === 'memory' && <Memory module={module} index={index} act={act} />}
+      {module.kind === 'password' && <Password module={module} index={index} act={act} />}
     </section>
   );
 }
@@ -284,6 +289,7 @@ export function Bomb({ bomb, act }: { bomb: BombView; act: Act }) {
         {bomb.modules.map((module, index) => (
           <ModuleCard key={index} module={module} index={index} act={act} />
         ))}
+        <Purge purge={bomb.purge} act={act} />
       </div>
     </div>
   );

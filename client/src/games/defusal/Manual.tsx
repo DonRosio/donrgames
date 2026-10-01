@@ -1,17 +1,21 @@
 import {
   BUTTON_ACTION_TEXT,
+  COLOR_NAMES,
   COLOR_NAMES_FEMININE,
   EAST,
   MAZE_SIZE,
   NORTH,
   PAGE_TITLES,
+  PURGE_SHIFT_TEXT,
+  SIMON_COLORS,
   SOUTH,
   WEST,
   conditionsText,
+  memoryRuleText,
   wireTargetText,
 } from '@mini-jeux/shared/games/defusal-data';
-import type { Maze, Page } from '@mini-jeux/shared/games/defusal-data';
-import { MARKER, WALL } from './art.ts';
+import type { Maze, Page, SimonMap } from '@mini-jeux/shared/games/defusal-data';
+import { MARKER, PAINT, WALL } from './art.ts';
 import styles from './defusal.module.css';
 
 type Of<K extends Page['kind']> = Extract<Page, { kind: K }>;
@@ -221,6 +225,183 @@ function MazesPage({ page }: { page: Of<'mazes'> }) {
   );
 }
 
+const dot = (color: keyof typeof PAINT) => (
+  <span className={styles.chip} style={{ background: PAINT[color] }} aria-hidden="true" />
+);
+
+function SimonTable({ title, map }: { title: string; map: SimonMap }) {
+  return (
+    <table className={styles.table}>
+      <caption>{title}</caption>
+      <tbody>
+        {SIMON_COLORS.map((flash) => (
+          <tr key={flash}>
+            <td>
+              {dot(flash)} {COLOR_NAMES[flash]}
+            </td>
+            <td>→</td>
+            <td>
+              {dot(map[flash])} <strong>{COLOR_NAMES[map[flash]]}</strong>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function SimonPage({ page }: { page: Of<'simon'> }) {
+  return (
+    <>
+      <p className={styles.howto}>
+        Le module joue une séquence de couleurs qui s'allonge à chaque étape. Le démineur ne doit
+        jamais presser la couleur qui clignote : il presse celle que donne la table, selon le numéro
+        de série et le nombre d'erreurs déjà commises sur toute la bombe (pas seulement sur ce
+        module). Il répond à la séquence entière à chaque étape.
+      </p>
+      {page.rows.map((row) => (
+        <div key={row.strikes} className={styles.section}>
+          <h4>
+            {row.strikes === 0
+              ? 'Aucune erreur'
+              : `${row.strikes} erreur${row.strikes > 1 ? 's' : ''}`}
+          </h4>
+          <div className={styles.tables}>
+            <SimonTable title="Le numéro de série contient une voyelle" map={row.vowel} />
+            <SimonTable title="Le numéro de série ne contient aucune voyelle" map={row.noVowel} />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+const symbols = (code: string) => [...code].map((c) => (c === '.' ? '·' : '—')).join(' ');
+
+function MorseAlphabetPage({ page }: { page: Of<'morseAlphabet'> }) {
+  return (
+    <>
+      <p className={styles.howto}>
+        Le démineur décrit la lampe : un éclat court est un point (·), un éclat long un trait (—).
+        Un temps d'arrêt plus long sépare les lettres, et la lampe attend encore plus longtemps
+        avant de reprendre le mot du début. Décodez le mot lettre par lettre.
+      </p>
+      <ul className={styles.alphabet}>
+        {page.letters.map(({ letter, code }) => (
+          <li key={letter}>
+            <strong>{letter}</strong> <span>{symbols(code)}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function MorseWordsPage({ page }: { page: Of<'morseWords'> }) {
+  return (
+    <>
+      <p className={styles.howto}>
+        Une fois le mot décodé (alphabet sur une autre page), cherchez-le ici : le démineur règle la
+        radio sur la fréquence indiquée, puis émet.
+      </p>
+      <table className={styles.table}>
+        <tbody>
+          {page.entries.map((entry) => (
+            <tr key={entry.word}>
+              <td>
+                <strong>{entry.word}</strong>
+              </td>
+              <td>{entry.frequency} MHz</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+function MemoryPage({ page }: { page: Of<'memory'> }) {
+  return (
+    <>
+      <p className={styles.howto}>
+        Le module a cinq étapes. À chacune, l'écran affiche un chiffre et quatre boutons portent
+        chacun un chiffre. Le démineur décrit l'écran et les boutons ; suivez la ligne de l'étape en
+        cours. Certaines lignes parlent de ce qui a été pressé aux étapes précédentes : faites noter
+        chaque étape (position et chiffre du bouton pressé). Une erreur recommence à l'étape 1, avec
+        un nouvel écran.
+      </p>
+      {page.stages.map((stage) => (
+        <div key={stage.stage} className={styles.section}>
+          <h4>Étape {stage.stage}</h4>
+          <ul className={styles.rules}>
+            {[1, 2, 3, 4].map((display) => (
+              <li key={display}>
+                Si l'écran affiche <strong>{display}</strong>,{' '}
+                {memoryRuleText(stage.rules[display]!)}.
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function PasswordPage({ page }: { page: Of<'passwordWords'> }) {
+  return (
+    <>
+      <p className={styles.howto}>
+        Le module a cinq colonnes de six lettres que le démineur fait défiler. Une fois qu'il vous a
+        lu les six lettres de chaque colonne, un seul mot de la liste complète peut être formé : les
+        deux experts qui tiennent cette liste doivent chacun chercher dans la leur.
+      </p>
+      <ul className={styles.words}>
+        {page.words.map((word) => (
+          <li key={word}>{word}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function PurgeWordsPage({ page }: { page: Of<'purgeWords'> }) {
+  return (
+    <>
+      <p className={styles.howto}>
+        La purge se réveille de temps en temps et affiche un mot : le démineur n'a que quarante
+        secondes pour ouvrir la bonne vanne. Cherchez le mot ici, puis appliquez la correction de
+        l'autre page.
+      </p>
+      <table className={styles.table}>
+        <tbody>
+          {page.entries.map((entry) => (
+            <tr key={entry.word}>
+              <td>
+                <strong>{entry.word}</strong>
+              </td>
+              <td>
+                {dot(entry.valve)} vanne {COLOR_NAMES_FEMININE[entry.valve]}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+function PurgeShiftPage({ page }: { page: Of<'purgeShift'> }) {
+  return (
+    <>
+      <p className={styles.howto}>
+        Une fois la vanne du mot trouvée (table sur une autre page), appliquez la première
+        correction vraie. Les vannes se suivent dans cet ordre : rouge, bleue, jaune, blanche.
+      </p>
+      <RuleList rules={page.rules} otherwise={page.otherwise} then={(s) => PURGE_SHIFT_TEXT[s]} />
+    </>
+  );
+}
+
 function PageBody({ page }: { page: Page }) {
   switch (page.kind) {
     case 'wires':
@@ -235,6 +416,20 @@ function PageBody({ page }: { page: Page }) {
       return <MazeIndexPage page={page} />;
     case 'mazes':
       return <MazesPage page={page} />;
+    case 'simon':
+      return <SimonPage page={page} />;
+    case 'morseAlphabet':
+      return <MorseAlphabetPage page={page} />;
+    case 'morseWords':
+      return <MorseWordsPage page={page} />;
+    case 'memory':
+      return <MemoryPage page={page} />;
+    case 'passwordWords':
+      return <PasswordPage page={page} />;
+    case 'purgeWords':
+      return <PurgeWordsPage page={page} />;
+    case 'purgeShift':
+      return <PurgeShiftPage page={page} />;
   }
 }
 
@@ -244,7 +439,11 @@ const titleOf = (page: Page) =>
     ? `${PAGE_TITLES.wires} (${page.sections.map((s) => s.count).join(' et ')} fils)`
     : page.kind === 'keypad'
       ? `${PAGE_TITLES.keypad} (colonnes ${page.columns[0]!.number} à ${page.columns.at(-1)!.number})`
-      : PAGE_TITLES[page.kind];
+      : page.kind === 'simon'
+        ? `${PAGE_TITLES.simon} (${page.rows.map((r) => r.strikes).join(' et ')} erreur${page.rows.length > 1 ? 's' : ''})`
+        : page.kind === 'memory'
+          ? `${PAGE_TITLES.memory} (étapes ${page.stages[0]!.stage} à ${page.stages.at(-1)!.stage})`
+          : PAGE_TITLES[page.kind];
 
 /** The expert's own sheets of the manual, then the appendix everybody has. */
 export function Manual({ pages }: { pages: Page[] }) {

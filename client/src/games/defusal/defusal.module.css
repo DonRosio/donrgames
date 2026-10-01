@@ -578,3 +578,339 @@ details > .sheetTitle {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 14px;
 }
+
+/* Colours module */
+.simon {
+  display: grid;
+  gap: 10px;
+}
+
+.pads {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.pad {
+  height: 64px;
+  border: 3px solid #141518;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--pad) 55%, #141518);
+  box-shadow: inset 0 -4px 0 rgb(0 0 0 / 30%);
+  cursor: pointer;
+  transition: background 0.08s;
+}
+
+.pad.padLit {
+  background: var(--pad);
+  box-shadow:
+    0 0 18px 4px var(--pad),
+    inset 0 -4px 0 rgb(0 0 0 / 20%);
+}
+
+.pad:active:not(:disabled) {
+  background: var(--pad);
+}
+
+.pad:disabled {
+  cursor: default;
+}
+
+.moduleFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Radio */
+.morse {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.lamp {
+  width: 56px;
+  height: 56px;
+  border: 3px solid #141518;
+  border-radius: 50%;
+  background: #3a3320;
+}
+
+.lamp.lampOn {
+  background: #ffe27a;
+  box-shadow: 0 0 22px 8px #ffd23f;
+}
+
+.tuner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.knob {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #8a8f98;
+  border-radius: 6px;
+  background: #1d1f23;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.frequency {
+  min-width: 7.5em;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: #0e1a12;
+  color: #62e07a;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.transmit {
+  justify-self: center;
+}
+
+/* Memory */
+.memory {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.memoryScreen {
+  width: 100%;
+  padding: 4px 0;
+  border-radius: 6px;
+  background: #0e1a12;
+  color: #62e07a;
+  font-family: var(--font-mono);
+  font-size: 2.6rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.memoryButtons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.memoryButton {
+  padding: 12px 0;
+  border: 2px solid #8a8f98;
+  border-radius: 6px;
+  background: #e9e4d6;
+  color: #1d1d1f;
+  font-size: 1.6rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.memoryButton:disabled {
+  cursor: default;
+}
+
+.stages {
+  display: flex;
+  gap: 8px;
+}
+
+.stage,
+.stageDone {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #555;
+  border-radius: 50%;
+  background: #1f3324;
+}
+
+.stageDone {
+  background: #62e07a;
+  box-shadow: 0 0 8px #62e07a;
+}
+
+/* Password */
+.password {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+}
+
+.wheels {
+  display: flex;
+  gap: 6px;
+}
+
+.wheel {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.wheelArrow {
+  width: 34px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #8a8f98;
+  border-radius: 4px;
+  background: #1d1f23;
+  color: var(--text);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.wheelLetter {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 44px;
+  border-radius: 4px;
+  background: #0e1a12;
+  color: #62e07a;
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+/* Purge */
+.purgeAwake {
+  border-color: var(--danger);
+  animation: awake 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes awake {
+  to {
+    box-shadow: 0 0 0 4px var(--danger);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .purgeAwake {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--danger);
+  }
+}
+
+.ledAlert {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ff5b4a;
+  box-shadow: 0 0 10px 2px #ff5b4a;
+}
+
+.purgeScreen {
+  padding: 6px 0;
+  border-radius: 6px;
+  background: #120806;
+  color: #ff5b4a;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.gauge {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #1d1f23;
+}
+
+.gaugeFill {
+  display: block;
+  height: 100%;
+  background: #ff5b4a;
+}
+
+.valves {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.valve {
+  height: 42px;
+  border: 3px solid #141518;
+  border-radius: 8px;
+  box-shadow: inset 0 -4px 0 rgb(0 0 0 / 30%);
+  cursor: pointer;
+}
+
+.valve:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Manual: new sheets */
+.chip {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 4px;
+  border: 1px solid #2a1a05;
+  border-radius: 50%;
+  vertical-align: -0.1em;
+}
+
+.tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.table {
+  border-collapse: collapse;
+}
+
+.table caption {
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  font-style: italic;
+  text-align: left;
+}
+
+.table td {
+  padding: 2px 12px 2px 0;
+}
+
+.alphabet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 1.05rem;
+}
+
+.alphabet strong {
+  display: inline-block;
+  width: 1.2em;
+}
+
+.alphabet span {
+  letter-spacing: 0.15em;
+}
+
+.words {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 2px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
