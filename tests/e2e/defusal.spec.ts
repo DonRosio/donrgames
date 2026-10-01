@@ -93,9 +93,41 @@ test('Désamorçage with four players: roles, separate manuals, six modules, fou
     expect(new Set(manuals).size).toBe(3);
 
     if (round === 1) {
+      // Every sheet is a block that unfolds, closed at first: the titles give the overview.
+      const sheets = experts[0]!.page.locator('article details');
+      await expect(sheets.first()).toBeVisible();
+      await expect(experts[0]!.page.locator('article details[open]')).toHaveCount(0);
+      await sheets.first().locator('summary').click();
+      await expect(experts[0]!.page.locator('article details[open]')).toHaveCount(1);
+      await sheets.first().locator('summary').click();
+      await expect(experts[0]!.page.locator('article details[open]')).toHaveCount(0);
+
+      // The bomb: two rows of three modules, then the purge alone, in the middle.
+      const boxes = await Promise.all(
+        ['Fils', 'Bouton', 'Symboles', 'Labyrinthe', 'Couleurs', 'Morse', 'Mémoire', 'Mot de passe']
+          .map((name) => defuser.page.getByRole('region', { name, exact: true }))
+          .map(async (region) => ((await region.count()) > 0 ? region.boundingBox() : null)),
+      );
+      const modules = boxes.filter((box) => box !== null);
+      expect(modules).toHaveLength(6);
+      const purge = (await defuser.page
+        .getByRole('region', { name: 'Purge', exact: true })
+        .boundingBox())!;
+      const rows = [...new Set(modules.map((box) => Math.round(box.y)))];
+      expect(rows).toHaveLength(2);
+      for (const y of rows)
+        expect(modules.filter((box) => Math.round(box.y) === y)).toHaveLength(3);
+      expect(purge.y).toBeGreaterThan(Math.max(...modules.map((box) => box.y + box.height)) - 1);
+      const left = Math.min(...modules.map((box) => box.x));
+      const right = Math.max(...modules.map((box) => box.x + box.width));
+      expect(Math.abs(purge.x + purge.width / 2 - (left + right) / 2)).toBeLessThan(3);
+    }
+
+    if (round === 1) {
       const button = defuser.page.getByRole('button', { name: /^Bouton / });
       if (await button.count()) {
         // Holding the big button lights its strip up (released at once, right or wrong).
+        await button.scrollIntoViewIfNeeded();
         const box = (await button.boundingBox())!;
         await defuser.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await defuser.page.mouse.down();

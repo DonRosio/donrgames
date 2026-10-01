@@ -450,16 +450,22 @@ export function Manual({ pages }: { pages: Page[] }) {
   return (
     <div className={styles.manual}>
       {pages.map((page, i) => (
-        <article key={i} className={styles.sheet}>
-          <span className={styles.sheetNumber}>
-            Feuillet {i + 1} / {pages.length}
-          </span>
-          <h3 className={styles.sheetTitle}>{capitalize(titleOf(page))}</h3>
-          <PageBody page={page} />
+        <article key={i} className={styles.sheetWrap}>
+          <details className={styles.sheet}>
+            <summary className={styles.sheetTitle}>
+              <span className={styles.sheetName}>{capitalize(titleOf(page))}</span>
+              <span className={styles.sheetNumber}>
+                Feuillet {i + 1} / {pages.length}
+              </span>
+            </summary>
+            <PageBody page={page} />
+          </details>
         </article>
       ))}
       <details className={styles.sheet}>
-        <summary className={styles.sheetTitle}>Annexe : lire la bombe</summary>
+        <summary className={styles.sheetTitle}>
+          <span className={styles.sheetName}>Annexe : lire la bombe</span>
+        </summary>
         <ul className={styles.rules}>
           <li>Le numéro de série a six caractères ; le dernier est toujours un chiffre.</li>
           <li>Les voyelles sont A, E, I, O et U (le numéro de série ne contient ni O ni Y).</li>

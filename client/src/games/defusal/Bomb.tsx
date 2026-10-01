@@ -271,14 +271,16 @@ function ModuleCard({ module, index, act }: { module: ModuleView; index: number;
           aria-label={module.solved ? 'désamorcé' : 'actif'}
         />
       </header>
-      {module.kind === 'wires' && <Wires module={module} index={index} act={act} />}
-      {module.kind === 'button' && <BigButton module={module} index={index} act={act} />}
-      {module.kind === 'keypad' && <Keypad module={module} index={index} act={act} />}
-      {module.kind === 'maze' && <MazeModule module={module} index={index} act={act} />}
-      {module.kind === 'simon' && <Simon module={module} index={index} act={act} />}
-      {module.kind === 'morse' && <Morse module={module} index={index} act={act} />}
-      {module.kind === 'memory' && <Memory module={module} index={index} act={act} />}
-      {module.kind === 'password' && <Password module={module} index={index} act={act} />}
+      <div className={styles.moduleBody}>
+        {module.kind === 'wires' && <Wires module={module} index={index} act={act} />}
+        {module.kind === 'button' && <BigButton module={module} index={index} act={act} />}
+        {module.kind === 'keypad' && <Keypad module={module} index={index} act={act} />}
+        {module.kind === 'maze' && <MazeModule module={module} index={index} act={act} />}
+        {module.kind === 'simon' && <Simon module={module} index={index} act={act} />}
+        {module.kind === 'morse' && <Morse module={module} index={index} act={act} />}
+        {module.kind === 'memory' && <Memory module={module} index={index} act={act} />}
+        {module.kind === 'password' && <Password module={module} index={index} act={act} />}
+      </div>
     </section>
   );
 }

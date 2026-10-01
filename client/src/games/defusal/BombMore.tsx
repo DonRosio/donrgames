@@ -282,7 +282,11 @@ export function Purge({ purge, act }: { purge: PurgeView; act: Act }) {
   const left = purge.until === null ? 0 : Math.max(0, purge.until - now);
   return (
     <section
-      className={purge.active ? `${styles.module} ${styles.purgeAwake}` : styles.module}
+      className={
+        purge.active
+          ? `${styles.module} ${styles.purgeSlot} ${styles.purgeAwake}`
+          : `${styles.module} ${styles.purgeSlot}`
+      }
       aria-label="Purge"
     >
       <header className={styles.moduleHeader}>
@@ -293,24 +297,26 @@ export function Purge({ purge, act }: { purge: PurgeView; act: Act }) {
           aria-label={purge.active ? 'en alerte' : 'au repos'}
         />
       </header>
-      <div className={styles.purgeScreen} role="status">
-        {purge.active ? purge.word : 'AU REPOS'}
-      </div>
-      <div className={styles.gauge} aria-hidden="true">
-        <span className={styles.gaugeFill} style={{ width: `${(left / total) * 100}%` }} />
-      </div>
-      <div className={styles.valves}>
-        {VALVES.map((valve, i) => (
-          <button
-            key={valve}
-            type="button"
-            className={styles.valve}
-            style={{ background: PAINT[valve] }}
-            disabled={!purge.active}
-            aria-label={`Vanne ${COLOR_NAMES[valve]}`}
-            onClick={() => void act('purge', { valve: i })}
-          />
-        ))}
+      <div className={`${styles.moduleBody} ${styles.purgeBody}`}>
+        <div className={styles.purgeScreen} role="status">
+          {purge.active ? purge.word : 'AU REPOS'}
+        </div>
+        <div className={styles.gauge} aria-hidden="true">
+          <span className={styles.gaugeFill} style={{ width: `${(left / total) * 100}%` }} />
+        </div>
+        <div className={styles.valves}>
+          {VALVES.map((valve, i) => (
+            <button
+              key={valve}
+              type="button"
+              className={styles.valve}
+              style={{ background: PAINT[valve] }}
+              disabled={!purge.active}
+              aria-label={`Vanne ${COLOR_NAMES[valve]}`}
+              onClick={() => void act('purge', { valve: i })}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
