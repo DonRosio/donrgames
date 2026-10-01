@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { KeyboardEvent } from 'react';
 import {
   COLOR_NAMES,
@@ -115,11 +115,9 @@ function BigButton({ module, index, act }: { module: Of<'button'>; index: number
     if (isDown && !event.repeat) press();
     if (!isDown) release();
   };
-  // The cover is a purely visual and local thing: the button cannot be pressed under it.
-  const [open, setOpen] = useState(false);
-  const lifted = open && !module.solved;
   return (
     <div className={styles.buttonModule}>
+      {/* The button alone is centred in the module; the strip sits beside it. */}
       <div className={styles.pedestalRow}>
         <div className={styles.pedestal}>
           <div className={styles.buttonPlate}>
@@ -128,7 +126,7 @@ function BigButton({ module, index, act }: { module: Of<'button'>; index: number
               className={styles.bigButton}
               style={{ background: PAINT[module.color] }}
               data-dark={module.color === 'blue' || module.color === 'red' ? '' : undefined}
-              disabled={module.solved || !lifted}
+              disabled={module.solved}
               aria-label={`Bouton ${COLOR_NAMES[module.color]} « ${module.label} »`}
               onPointerDown={(event) => {
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -143,10 +141,6 @@ function BigButton({ module, index, act }: { module: Of<'button'>; index: number
               {module.label}
             </button>
           </div>
-          <div
-            className={lifted ? `${styles.cover} ${styles.coverLifted}` : styles.cover}
-            aria-hidden="true"
-          />
         </div>
         <span
           className={styles.strip}
@@ -155,20 +149,6 @@ function BigButton({ module, index, act }: { module: Of<'button'>; index: number
           role="img"
         />
       </div>
-      <button
-        type="button"
-        className={`btn btn-small ${styles.openCover}`}
-        disabled={module.solved}
-        aria-expanded={lifted}
-        aria-label={lifted ? 'Fermer le capuchon' : 'Ouvrir le capuchon'}
-        onClick={() => {
-          // Closing the cover on a button still held lets go of it first.
-          if (lifted) release();
-          setOpen(!open);
-        }}
-      >
-        {lifted ? 'FERMER' : 'OUVRIR'}
-      </button>
     </div>
   );
 }
