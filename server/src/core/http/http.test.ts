@@ -28,7 +28,7 @@ describe('HTTP API', () => {
   it('reports its health and the game catalog', async () => {
     expect((await built.app.inject('/api/health')).json()).toEqual({ ok: true });
     const catalog = (await built.app.inject('/api/games')).json() as { meta: { id: string } }[];
-    expect(catalog.map((game) => game.meta.id)).toEqual(['dubbing', 'among-legends']);
+    expect(catalog.map((game) => game.meta.id)).toEqual(['dubbing', 'among-legends', 'defusal']);
   });
 
   it('creates a room and returns a code and a 256-bit token', async () => {
