@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatClock } from '@mini-jeux/shared/games/defusal-data';
 import { History } from './History.tsx';
+import { playDefused, playExplosion } from './sounds.ts';
 import { nameOf } from './common.tsx';
 import type { ScreenProps } from './common.tsx';
 import styles from './defusal.module.css';
@@ -13,10 +14,22 @@ export function ResultScreen({ view, room, isHost, act }: ScreenProps<'result'>)
     setError(result.ok ? null : result.message);
   };
   const defused = view.outcome === 'defused';
+  const { round } = view;
+  useEffect(() => {
+    if (defused) playDefused();
+    else playExplosion();
+  }, [defused, round]);
   return (
     <section className={styles.screen}>
       <header className={`card ${styles.result} ${defused ? styles.resultWin : styles.resultLoss}`}>
-        <h2 className={styles.role}>{defused ? 'Bombe désamorcée !' : 'BOUM'}</h2>
+        {defused ? (
+          <span className={styles.ring} aria-hidden="true" />
+        ) : (
+          <span className={styles.boom} aria-hidden="true" />
+        )}
+        <h2 className={defused ? styles.role : `${styles.role} ${styles.boomTitle}`}>
+          {defused ? 'Bombe désamorcée !' : 'BOUM'}
+        </h2>
         <p>
           {defused
             ? `${nameOf(room, view.defuser)} et les experts l'ont désamorcée avec ${formatClock(view.remaining)} d'avance.`

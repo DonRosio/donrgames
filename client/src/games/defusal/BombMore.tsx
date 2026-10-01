@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import {
   COLOR_NAMES,
@@ -10,6 +10,8 @@ import type { ModuleView, PurgeView, SimonColor } from '@mini-jeux/shared/games/
 import { useServerNow } from '../../core/session/context.ts';
 import { PAINT } from './art.ts';
 import type { ScreenProps } from './common.tsx';
+import { purgeBeepEvery } from './sound-events.ts';
+import { playPurgeBeep, playSimon } from './sounds.ts';
 import styles from './defusal.module.css';
 
 type Act = ScreenProps<'defusing'>['act'];
@@ -29,7 +31,15 @@ export function Simon({ module, index, act }: { module: Of<'simon'>; index: numb
     if (module.solved) return;
     const timers: number[] = [];
     sequence.split(',').forEach((color, i) => {
-      timers.push(window.setTimeout(() => setLit(color as SimonColor), 700 + i * 900));
+      timers.push(
+        window.setTimeout(
+          () => {
+            setLit(color as SimonColor);
+            playSimon(color as SimonColor);
+          },
+          700 + i * 900,
+        ),
+      );
       timers.push(window.setTimeout(() => setLit(null), 700 + i * 900 + 550));
     });
     return () => {
@@ -49,7 +59,10 @@ export function Simon({ module, index, act }: { module: Of<'simon'>; index: numb
             style={{ '--pad': PAINT[color] } as CSSProperties}
             disabled={module.solved}
             aria-label={`Couleur ${COLOR_NAMES[color]}`}
-            onClick={() => void act('simon', { module: index, color })}
+            onClick={() => {
+              playSimon(color);
+              void act('simon', { module: index, color });
+            }}
           />
         ))}
       </div>
@@ -248,6 +261,23 @@ export function Password({
 /** The module to keep an eye on: when it wakes up, a word, a window to answer, four valves. */
 export function Purge({ purge, act }: { purge: PurgeView; act: Act }) {
   const now = useServerNow(100);
+  const nowRef = useRef(now);
+  useEffect(() => {
+    nowRef.current = now;
+  }, [now]);
+  const until = purge.until;
+  const active = purge.active;
+  // Beeps for as long as the purge is awake, faster as its window closes.
+  useEffect(() => {
+    if (!active || until === null) return;
+    let timer = 0;
+    const beep = () => {
+      playPurgeBeep();
+      timer = window.setTimeout(beep, purgeBeepEvery(until - nowRef.current));
+    };
+    beep();
+    return () => window.clearTimeout(timer);
+  }, [active, until]);
   const total = 40_000;
   const left = purge.until === null ? 0 : Math.max(0, purge.until - now);
   return (

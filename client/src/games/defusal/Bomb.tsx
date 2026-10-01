@@ -259,7 +259,10 @@ function MazeModule({ module, index, act }: { module: Of<'maze'>; index: number;
 
 function ModuleCard({ module, index, act }: { module: ModuleView; index: number; act: Act }) {
   return (
-    <section className={styles.module} aria-label={MODULE_NAMES[module.kind]}>
+    <section
+      className={module.solved ? `${styles.module} ${styles.moduleSolved}` : styles.module}
+      aria-label={MODULE_NAMES[module.kind]}
+    >
       <header className={styles.moduleHeader}>
         <span>{MODULE_NAMES[module.kind]}</span>
         <span
@@ -284,6 +287,10 @@ function ModuleCard({ module, index, act }: { module: ModuleView; index: number;
 export function Bomb({ bomb, act }: { bomb: BombView; act: Act }) {
   return (
     <div className={styles.bomb}>
+      <div className={styles.plate} aria-hidden="true">
+        <span>DX-4</span>
+        <span>NE PAS SECOUER</span>
+      </div>
       <EdgeworkPanel edgework={bomb.edgework} />
       <div className={styles.modules}>
         {bomb.modules.map((module, index) => (

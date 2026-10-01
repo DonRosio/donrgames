@@ -451,6 +451,9 @@ export function Manual({ pages }: { pages: Page[] }) {
     <div className={styles.manual}>
       {pages.map((page, i) => (
         <article key={i} className={styles.sheet}>
+          <span className={styles.sheetNumber}>
+            Feuillet {i + 1} / {pages.length}
+          </span>
           <h3 className={styles.sheetTitle}>{capitalize(titleOf(page))}</h3>
           <PageBody page={page} />
         </article>

@@ -58,6 +58,16 @@ test('Désamorçage with four players: roles, separate manuals, six modules, fou
       throw new Error('no defuser');
     })();
     defusers.add(defuser.name);
+    if (round === 1) {
+      // The sound can be turned off, and on again (it is made in the browser, no file).
+      const toggle = alice.page.getByRole('button', { name: /^.{0,3}Son/ });
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+      await toggle.click();
+      await expect(toggle).toHaveText(/Son coupé/);
+      await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    }
     for (const player of players) {
       await player.page.getByRole('button', { name: 'Je suis prêt' }).click();
     }

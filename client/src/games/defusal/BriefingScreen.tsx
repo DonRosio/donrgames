@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { resumeAudio } from '../../core/media/audio.ts';
 import { History } from './History.tsx';
-import { nameOf } from './common.tsx';
+import { SoundToggle, nameOf } from './common.tsx';
+import { BombIcon, BookIcon } from './Icons.tsx';
 import type { ScreenProps } from './common.tsx';
 import styles from './defusal.module.css';
 
@@ -12,6 +14,8 @@ export function BriefingScreen({ view, room, act }: ScreenProps<'briefing'>) {
   const waiting = view.players.filter((id) => !view.ready.includes(id));
 
   const markReady = async () => {
+    // This click is what lets the page play the sounds of the game later on.
+    await resumeAudio();
     const result = await act('ready', {});
     setError(result.ok ? null : result.message);
   };
@@ -22,7 +26,10 @@ export function BriefingScreen({ view, room, act }: ScreenProps<'briefing'>) {
         <p className={styles.round}>
           Bombe {view.round} / {view.rounds}
         </p>
-        <h2 className={styles.role}>{isDefuser ? 'Tu es le démineur' : 'Tu es expert'}</h2>
+        <div className={styles.roleRow}>
+          {isDefuser ? <BombIcon /> : <BookIcon />}
+          <h2 className={styles.role}>{isDefuser ? 'Tu es le démineur' : 'Tu es expert'}</h2>
+        </div>
         {isDefuser ? (
           <p>
             Tu vas voir la bombe, mais pas le manuel. Décris tout ce que tu vois aux experts, et
@@ -42,14 +49,17 @@ export function BriefingScreen({ view, room, act }: ScreenProps<'briefing'>) {
           </li>
           <li>Nouvelles règles pour chaque bombe : rien ne se garde d'une bombe à l'autre.</li>
         </ul>
-        <button
-          type="button"
-          className={`btn btn-primary ${styles.action}`}
-          disabled={ready}
-          onClick={() => void markReady()}
-        >
-          {ready ? '✓ Prêt' : 'Je suis prêt'}
-        </button>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={ready}
+            onClick={() => void markReady()}
+          >
+            {ready ? '✓ Prêt' : 'Je suis prêt'}
+          </button>
+          <SoundToggle />
+        </div>
         {error && (
           <p className="error" role="alert">
             {error}
