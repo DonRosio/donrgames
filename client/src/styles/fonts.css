@@ -13,3 +13,17 @@
   src: url('../assets/fonts/heyam.woff2') format('woff2');
   font-display: swap;
 }
+
+/* Qui est le + ?: the "Qui est le +" of the question (script). */
+@font-face {
+  font-family: 'Candice';
+  src: url('../assets/fonts/candice.woff2') format('woff2');
+  font-display: swap;
+}
+
+/* Qui est le + ?: the adjective of the question and the number of votes (rounded). */
+@font-face {
+  font-family: 'Sniglet';
+  src: url('../assets/fonts/sniglet.woff2') format('woff2');
+  font-display: swap;
+}

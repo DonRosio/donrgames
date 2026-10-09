@@ -32,11 +32,23 @@
   accent-color: var(--accent);
 }
 
+/* The box and its sentence on one line (the global input style is full width). */
 .check {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
   color: var(--text-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.check input {
+  flex: none;
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .actions {

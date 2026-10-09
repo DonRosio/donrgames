@@ -226,6 +226,51 @@ describe('games in a room', () => {
     expect(dave.player.role).toBe('player');
   });
 
+  it('goes straight back to the lobby at the end of a game without ranking', () => {
+    const unranked = {
+      ...fixtureGame,
+      contract: {
+        ...fixtureGame.contract,
+        meta: { ...fixtureGame.contract.meta, ranked: false as const },
+      },
+    };
+    rooms = new RoomManager({
+      clock: scheduler.clock,
+      random: counterRandom(),
+      limits: { maxRooms: 10, maxPlayersPerRoom: 10, timings: DEFAULT_TIMINGS },
+      games: [unranked],
+      scheduler,
+      gameRandom: seededRandom(1),
+    });
+    rooms.setEvents({
+      roomChanged: () => {},
+      gameUpdated: () => {},
+      playerRemoved: () => {},
+      roomClosed: () => {},
+      gameFailed: (_room, error) => {
+        throw error;
+      },
+    });
+    host = rooms.createRoom({ nickname: 'Alice' });
+    rooms.attachSocket(host, 's-alice');
+    bob = rooms.joinRoom({ code: host.room.code, nickname: 'Bob' });
+    rooms.attachSocket(bob, 's-bob');
+    rooms.setSettings(host, { rounds: 1 });
+    rooms.startGame(host);
+    const media = rooms.media.put({
+      roomId: room().id,
+      ownerId: bob.player.id,
+      mime: 'image/png',
+      data: Buffer.alloc(10),
+    })!;
+    submitAll(80);
+    rooms.gameAction(host, 'next', {});
+    expect(room().status).toBe('lobby');
+    expect(room().results).toBeNull();
+    expect(rooms.gameView(room(), host.player.id)).toBeNull();
+    expect(rooms.media.get(media.id)).toBeUndefined();
+  });
+
   it('keeps the nickname of a participant who left in the ranking', () => {
     rooms.setSettings(host, { rounds: 1 });
     rooms.startGame(host);

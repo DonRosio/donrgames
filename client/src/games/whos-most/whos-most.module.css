@@ -1,7 +1,16 @@
+/*
+ * The frames, the brushes and the confetti are drawn works (like Starburst): their colours are
+ * this palette, not the tokens.
+ */
 .screen {
+  --frame-ink: #17100f;
+  --frame-ring: #fdf8ef;
+  --frame-fill: radial-gradient(circle at 50% 30%, #b49bff 0%, #7c55e6 55%, #5533b8 100%);
+  --brush-ink: #0e0806;
+
   display: grid;
   gap: var(--gap);
-  max-width: 960px;
+  max-width: 1000px;
   margin: 0 auto;
   width: 100%;
 }
@@ -44,101 +53,244 @@
   font-weight: 700;
 }
 
-.hint {
-  justify-self: center;
-  padding: 4px 18px;
-  border: 1px solid #b89a5e;
-  border-radius: var(--radius-small);
-  background: #f6ecd2;
-  box-shadow: var(--shadow-button);
-  color: #2a1a05;
-  font-size: 1.1rem;
-  font-weight: 700;
-  text-align: center;
+/* ---------------------------------------------------------------- brush */
+
+/*
+ * A text on a translucent black marker smear (Brush.tsx): the streaks stick out a little around
+ * the text. The svg is stretched to the size of the text.
+ */
+.brushed {
+  position: relative;
+  display: inline-grid;
+  justify-items: center;
+  padding: 3px 22px 5px;
 }
 
-.question {
+.brushed-label {
+  padding: 3px 24px 6px;
+}
+
+.brushed-title {
+  padding: 34px 66px 22px;
+}
+
+.brushed-text {
+  max-width: min(640px, 100%);
+  padding: 12px 44px 18px;
+}
+
+.brushed-button {
+  padding: 12px 54px 18px;
+}
+
+.brush {
+  position: absolute;
+  top: -14%;
+  left: -6%;
+  width: 112%;
+  height: 128%;
+  overflow: visible;
+  pointer-events: none;
+  /* Soft edges, like ink that bleeds a little. */
+  filter: blur(0.9px);
+  transition:
+    transform 0.15s,
+    opacity 0.15s;
+}
+
+.brush polygon {
+  fill: var(--brush-ink);
+}
+
+.brush .brushBand {
+  fill-opacity: 0.46;
+}
+
+.brush .brushShine {
+  fill: #fff;
+  fill-opacity: 0.07;
+}
+
+.brushedText {
+  position: relative;
+  display: block;
+  color: var(--frame-ring);
+  font-family: var(--font-script);
+  font-size: 1.35rem;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: 0 2px 3px rgb(0 0 0 / 60%);
+}
+
+/* The labels under a head (Sniglet, set by .label and .votes) keep their own font. */
+.brushed-label .brushedText {
+  font-family: var(--font-rounded);
+  font-size: inherit;
+}
+
+.brushed-title .brushedText {
   display: grid;
   justify-items: center;
-  margin: 0;
-  padding: 14px 28px;
-  border: 1px solid rgb(255 232 170 / 28%);
-  border-radius: var(--radius);
-  background: rgb(30 18 22 / 84%);
-  box-shadow: var(--shadow-card);
-  text-align: center;
-  justify-self: center;
+  font-family: inherit;
+  font-size: inherit;
 }
 
-.question span {
-  color: var(--text-muted);
-  font-size: 1.3rem;
-}
-
-.question strong {
+.brushed-button .brushedText {
   color: var(--accent-strong);
-  font-size: clamp(1.6rem, 4vw, 2.4rem);
-  line-height: 1.15;
+  font-size: 1.9rem;
 }
 
-.grid,
-.podium {
+.digits {
+  font-family: var(--font-rounded);
+}
+
+/* A button that is a text on a brush. */
+.brushButton {
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.brushButton:hover:not(:disabled) .brush {
+  transform: scale(1.05);
+}
+
+.brushButton:hover:not(:disabled) .brushedText {
+  color: #fff3c8;
+}
+
+.brushButton:active:not(:disabled) .brush {
+  transform: scale(0.98);
+}
+
+.brushButton:disabled {
+  cursor: not-allowed;
+}
+
+.brushButton:disabled .brush {
+  opacity: 0.55;
+}
+
+.brushButton:disabled .brushedText {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.brushButton:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+
+/* The bottom of a screen: texts and buttons on brushes, no box. */
+.bottom {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 10px 0 24px;
+}
+
+/* ---------------------------------------------------------------- question */
+
+.question {
+  justify-self: center;
+  margin: 0;
+  text-align: center;
+  line-height: 1;
+}
+
+.question .brushedText {
+  gap: 2px;
+}
+
+.lead {
+  color: var(--frame-ring);
+  font-family: var(--font-script);
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
+  font-weight: 400;
+  text-shadow:
+    0 0 14px rgb(124 85 230 / 85%),
+    0 2px 3px rgb(0 0 0 / 60%);
+}
+
+.adjective {
+  margin-top: 4px;
+  color: var(--accent-strong);
+  font-family: var(--font-rounded);
+  font-size: clamp(2rem, 5.5vw, 3.4rem);
+  font-weight: 400;
+  text-shadow:
+    -2px -2px 0 var(--frame-ink),
+    2px -2px 0 var(--frame-ink),
+    -2px 2px 0 var(--frame-ink),
+    2px 2px 0 var(--frame-ink),
+    0 4px 8px rgb(0 0 0 / 50%);
+}
+
+/* ---------------------------------------------------------------- frames */
+
+.grid {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 18px;
+  gap: 30px 26px;
   margin: 0;
-  padding: 0;
+  padding: 18px 0 0;
   list-style: none;
 }
 
-.podium {
-  gap: 28px;
+/* The ballot: five heads per row at most, like the wireframe. */
+.ballot {
+  max-width: calc(5 * 136px + 4 * 26px);
+  justify-self: center;
 }
 
-/* A head: thick dark outline, cream line, warm background; nickname on top, like the wireframes. */
+/* A head: the frame floats very slightly, each one at its own pace (see layout.ts). */
 .head {
-  position: relative;
   display: grid;
   justify-items: center;
-  gap: 6px;
-  width: 128px;
-  transition:
-    opacity 0.2s,
-    transform 0.2s;
+  gap: 10px;
+  width: var(--size);
+  transform: rotate(var(--tilt));
+  animation: float var(--float-duration, 5s) ease-in-out var(--float-delay, 0s) infinite;
+  transition: opacity 0.2s;
 }
 
-.podium .head {
-  width: 190px;
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--tilt));
+  }
+
+  50% {
+    transform: translateY(-5px) rotate(calc(var(--tilt) + 0.8deg));
+  }
 }
 
-.name {
-  max-width: 100%;
-  overflow: hidden;
-  padding: 0 4px;
-  color: var(--text);
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  text-shadow:
-    0 0 4px var(--ink),
-    0 2px 2px var(--ink);
-  white-space: nowrap;
+/* Thick dark outline, light ring, coloured inside; corners a little uneven, as drawn by hand. */
+.frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 6%;
+  border: calc(var(--size) * 0.045) solid var(--frame-ink);
+  border-radius: 24% 27% 25% 28% / 27% 24% 28% 25%;
+  background: var(--frame-ring);
+  box-shadow:
+    0 0 0 calc(var(--size) * 0.012) rgb(255 255 255 / 25%),
+    0 12px 22px rgb(0 0 0 / 45%);
 }
 
 .picture {
   display: grid;
   place-items: center;
-  width: 100%;
   aspect-ratio: 1;
   overflow: hidden;
-  border: 4px solid var(--ink);
-  border-radius: var(--radius);
-  outline: 3px solid #ecd39a;
-  outline-offset: -7px;
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-frame);
+  border-radius: 20% 23% 21% 24% / 23% 20% 24% 21%;
+  background: var(--frame-fill);
 }
 
 .picture img {
@@ -149,39 +301,61 @@
 }
 
 .initial {
-  color: var(--accent-strong);
-  font-size: 3.4rem;
-  font-weight: 800;
+  color: var(--frame-ring);
+  font-family: var(--font-rounded);
+  font-size: calc(var(--size) * 0.42);
+  text-shadow: 0 3px 0 var(--frame-ink);
 }
 
-.caption,
-.votes {
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgb(30 18 22 / 84%);
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  font-weight: 700;
+/* The nickname, on the top edge of the frame. */
+.name {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  max-width: 112%;
+  overflow: hidden;
+  transform: translate(-50%, -58%);
+  color: var(--frame-ring);
+  font-family: var(--font-title);
+  font-size: calc(var(--size) * 0.16 * var(--name-scale, 1));
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow:
+    -3px -3px 0 var(--frame-ink),
+    0 -3px 0 var(--frame-ink),
+    3px -3px 0 var(--frame-ink),
+    3px 0 0 var(--frame-ink),
+    3px 3px 0 var(--frame-ink),
+    0 3px 0 var(--frame-ink),
+    -3px 3px 0 var(--frame-ink),
+    -3px 0 0 var(--frame-ink);
 }
 
-.votes {
-  color: var(--accent-strong);
-  font-size: 1.1rem;
-}
-
-.chosen .picture {
-  border-color: var(--accent);
+.chosen .frame {
+  border-color: var(--frame-ink);
   box-shadow:
-    0 0 0 3px var(--accent),
-    0 0 26px rgb(247 181 68 / 70%);
-}
-
-.chosen {
-  transform: scale(1.04);
+    0 0 0 4px var(--accent),
+    0 0 34px rgb(247 181 68 / 75%),
+    0 12px 22px rgb(0 0 0 / 45%);
 }
 
 .dim {
-  opacity: 0.5;
+  opacity: 0.6;
+}
+
+.label,
+.votes {
+  color: var(--frame-ring);
+  font-family: var(--font-rounded);
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.votes {
+  font-size: 1.25rem;
 }
 
 .pick {
@@ -197,29 +371,100 @@
   cursor: default;
 }
 
-.pick:hover:not(:disabled) .head {
-  transform: translateY(-4px);
+.pick:hover:not(:disabled) .frame {
+  box-shadow:
+    0 0 0 3px var(--accent-strong),
+    0 12px 22px rgb(0 0 0 / 45%);
 }
 
 .pick:focus-visible {
   outline: 3px solid var(--focus);
-  outline-offset: 4px;
+  outline-offset: 6px;
 }
 
-.board {
-  width: min(480px, 100%);
+/* ---------------------------------------------------------------- reveal stage */
+
+/* The question on top, the most voted heads in the middle, the others scattered around. */
+.stage {
+  position: relative;
+  height: 660px;
 }
 
-.actions {
+.stageTitle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 60%;
+}
+
+.winners {
+  position: absolute;
+  top: 52%;
+  left: 50%;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  align-items: center;
+  gap: 26px;
+  width: 64%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform: translate(-50%, -50%);
+}
+
+.others {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scattered {
+  position: absolute;
+  top: var(--y, 50%);
+  left: var(--x, 50%);
+  transform: translate(-50%, -50%);
+}
+
+/* In a narrow window: one column, the winners first. */
+@media (max-width: 860px) {
+  .stage {
+    display: grid;
+    justify-items: center;
+    gap: 24px;
+    height: auto;
+  }
+
+  .stageTitle,
+  .winners {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    transform: none;
+  }
+
+  .others {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 28px 22px;
+  }
+
+  .scattered {
+    position: static;
+    transform: none;
+  }
 }
 
 /* Heads appear one after the other during the reveal. */
 .pop {
   animation: pop 0.5s var(--delay, 0ms) both cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.scattered.pop {
+  animation-name: pop-scattered;
 }
 
 @keyframes pop {
@@ -233,6 +478,26 @@
     transform: scale(1);
   }
 }
+
+@keyframes pop-scattered {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (max-width: 860px) {
+  .scattered.pop {
+    animation-name: pop;
+  }
+}
+
+/* ---------------------------------------------------------------- confetti */
 
 .confetti {
   position: fixed;
@@ -261,6 +526,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .head,
   .pop,
   .confetti span {
     animation: none;

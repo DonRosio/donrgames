@@ -15,6 +15,11 @@ export interface GameMeta {
   contentUnit?: string;
   /** false: the game consumes its content ("à usage unique" badge, played content tracking). */
   replayable: boolean;
+  /**
+   * false: a game played for fun, with no final ranking. When it ends (`ctx.end([])`), everyone
+   * goes straight back to the lobby.
+   */
+  ranked?: false;
 }
 
 /** "2 à 10 joueurs", or "5 ou 10 joueurs" for games with fixed player counts. */

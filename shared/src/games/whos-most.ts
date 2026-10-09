@@ -6,12 +6,14 @@ export const whosMostContract = defineContract({
     id: 'whos-most',
     name: 'Qui est le + ?',
     description:
-      'Une question du genre « Qui est le + sale ? », et tout le monde vote pour une tête. Chaque vote vaut un point.',
+      'Une question du genre « Qui est le + sale ? », tout le monde vote pour une tête, puis on découvre qui a été le plus désigné. Pour rire : pas de classement.',
     minPlayers: 3,
     maxPlayers: 10,
     contentUnit: 'question',
     // The questions are the content of the game: never twice the same in a room.
     replayable: false,
+    // Played for fun: the votes of each question are shown, no points, no final ranking.
+    ranked: false,
   },
   phases: ['photos', 'voting', 'reveal'],
   settings: {
@@ -76,7 +78,5 @@ export type WhosMostView =
       heads: Head[];
       /** Votes received by each head for this question, most voted first. */
       results: { playerId: string; votes: number }[];
-      /** Points so far, best first. */
-      totals: { playerId: string; total: number }[];
       last: boolean;
     });

@@ -1,4 +1,8 @@
 Heyam -> Utilise cette police pour la phrase "Manche suivante !" prononcée par le présentateur lors de la transition avec les nuages. Il faut qu'elle soit affichée en vraiment gros.
 Shizuoka Cyberpunk -> Titre "Mini-jeux entre amis" et titre des jeux
 Utilise la police par défaut pour le reste.
+Qui est le + ? (whos-most) :
+  Candice Personal Use -> "Qui est le +" de la question et les textes posés sur les gribouillages (boutons de l'hôte, vote, indications). Licence « Personal Use » : à vérifier pour un site web.
+  Sniglet -> l'adjectif de la question, le nombre de votes et les petites étiquettes sous les têtes.
+  Shizuoka Cyberpunk -> le pseudo, sur le bord haut de chaque cadre.
 Shizuoka Cyberpunk -> aussi pour les titres d'écran des jeux (rôle d'Among Legends, « Tu es le démineur », « BOUM » du Désamorçage).

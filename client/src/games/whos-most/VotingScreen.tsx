@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { HeadFrame, QuestionHeader, QuestionTitle, useHeadPictures } from './common.tsx';
 import type { ScreenProps } from './common.tsx';
+import { Brush, BrushButton } from './Brush.tsx';
 import styles from './whos-most.module.css';
 
 export function VotingScreen({ view, room, isHost, act, fetchMedia }: ScreenProps<'voting'>) {
@@ -30,7 +31,7 @@ export function VotingScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
       <QuestionHeader index={view.index} total={view.total} step="Vote" />
       <QuestionTitle question={view.question} />
 
-      <ul className={styles.grid} aria-label="Votez pour une tête">
+      <ul className={`${styles.grid} ${styles.ballot}`} aria-label="Votez pour une tête">
         {view.heads.map((head) => (
           <li key={head.playerId}>
             <button
@@ -42,16 +43,18 @@ export function VotingScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
               onClick={() => setChosen(head.playerId)}
             >
               <HeadFrame
+                playerId={head.playerId}
                 name={name(head.playerId)}
                 src={head.mediaId ? (pictures[head.mediaId] ?? null) : null}
-                {...(selected === head.playerId
-                  ? { state: 'chosen' as const }
-                  : selected !== null
-                    ? { state: 'dim' as const }
-                    : {})}
+                size={136}
+                state={
+                  selected === head.playerId ? 'chosen' : selected !== null ? 'dim' : undefined
+                }
               >
                 {selected === head.playerId && (
-                  <span className={styles.caption}>{locked ? '✓ Ton vote' : 'Ton choix'}</span>
+                  <Brush seed={31}>
+                    <span className={styles.label}>{locked ? 'Ton vote' : 'Ton choix'}</span>
+                  </Brush>
                 )}
               </HeadFrame>
             </button>
@@ -59,37 +62,32 @@ export function VotingScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
         ))}
       </ul>
 
-      <div className={`card ${styles.center}`}>
+      <div className={styles.bottom}>
         {locked ? (
-          <p className={styles.big}>Vote enregistré.</p>
+          <Brush size="button" seed={32}>
+            Vote enregistré
+          </Brush>
         ) : (
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!chosen || busy}
-            onClick={() => void vote()}
-          >
-            Voter pour {chosen ? name(chosen) : '…'}
-          </button>
+          <BrushButton seed={33} disabled={!chosen || busy} onClick={() => void vote()}>
+            {chosen ? `Voter pour ${name(chosen)}` : 'Choisis une tête'}
+          </BrushButton>
         )}
-        <p className="muted">
-          Tu peux voter pour toi. Un vote est définitif. {view.voted.length} vote
-          {view.voted.length > 1 ? 's' : ''} reçu{view.voted.length > 1 ? 's' : ''}.
-        </p>
+        <Brush size="text" seed={34}>
+          Tu peux voter pour toi, un vote est définitif ·{' '}
+          <span className={styles.digits}>{view.voted.length}</span> vote
+          {view.voted.length > 1 ? 's' : ''} reçu{view.voted.length > 1 ? 's' : ''}
+        </Brush>
         {isHost && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!view.allVoted}
-            onClick={() => void reveal()}
-          >
+          <BrushButton seed={35} disabled={!view.allVoted} onClick={() => void reveal()}>
             Révéler les résultats
-          </button>
+          </BrushButton>
         )}
         {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
+          <Brush size="text" seed={36}>
+            <span className="error" role="alert">
+              {error}
+            </span>
+          </Brush>
         )}
       </div>
     </section>

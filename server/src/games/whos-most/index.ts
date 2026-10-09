@@ -15,7 +15,6 @@ export interface WhosMostState {
   votes: Map<string, string>;
   /** Votes received by each head for the question just revealed. */
   counts: Map<string, number>;
-  scores: Map<string, number>;
 }
 
 type Ctx = GameContext<WhosMostContract>;
@@ -42,11 +41,14 @@ function allVoted(state: WhosMostState, players: Roster): boolean {
   return players.awaited().every((id) => state.votes.has(id));
 }
 
-/** Pictures are personal data: deleted before the game ends (the core also deletes the room's). */
+/**
+ * Pictures are personal data: deleted before the game ends (the core also deletes the room's).
+ * No ranking (`ranked: false`): everyone goes back to the lobby.
+ */
 function endGame(state: WhosMostState, ctx: Ctx): void {
   for (const mediaId of state.photos.values()) ctx.media.discard(mediaId);
   state.photos.clear();
-  ctx.end([...state.scores].map(([playerId, score]) => ({ playerId, score })));
+  ctx.end([]);
 }
 
 function question(state: WhosMostState) {
@@ -72,13 +74,12 @@ function drawQuestions(ctx: Ctx, count: number): string[] {
 export const whosMostGame = defineGame({
   contract: whosMostContract,
   content: 'text',
-  setup: (ctx, { players, settings }): WhosMostState => ({
+  setup: (ctx, { settings }): WhosMostState => ({
     questions: drawQuestions(ctx, settings.questions),
     index: 0,
     photos: new Map(),
     votes: new Map(),
     counts: new Map(),
-    scores: new Map(players.map((id) => [id, 0])),
   }),
   initialPhase: 'photos',
   phases: {
@@ -125,7 +126,6 @@ export const whosMostGame = defineGame({
         state.counts.clear();
         for (const target of state.votes.values()) {
           state.counts.set(target, (state.counts.get(target) ?? 0) + 1);
-          state.scores.set(target, (state.scores.get(target) ?? 0) + 1);
         }
       },
       on: {
@@ -176,9 +176,6 @@ export const whosMostGame = defineGame({
           results: [...ids]
             .map((playerId) => ({ playerId, votes: state.counts.get(playerId) ?? 0 }))
             .sort((a, b) => b.votes - a.votes),
-          totals: [...state.scores]
-            .map(([playerId, total]) => ({ playerId, total }))
-            .sort((a, b) => b.total - a.total),
           last: state.index + 1 >= state.questions.length,
         };
       }

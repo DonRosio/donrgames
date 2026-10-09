@@ -108,7 +108,7 @@ describe('Qui est le + ?', () => {
     expect(JSON.stringify(seenByCarol)).not.toContain('"target"');
   });
 
-  it('the host reveals once everyone voted; one vote is one point', () => {
+  it('the host reveals once everyone voted, with the votes each head received', () => {
     const g = play();
     toVoting(g);
     voteAll(g, (voter) => (voter === 'dave' ? 'bob' : 'alice'), ['alice', 'bob', 'carol']);
@@ -121,11 +121,10 @@ describe('Qui est le + ?', () => {
     const reveal = view(g, 'carol', 'reveal');
     expect(reveal.results[0]).toEqual({ playerId: 'alice', votes: 3 });
     expect(reveal.results.find((r) => r.playerId === 'bob')!.votes).toBe(1);
-    expect(reveal.totals[0]).toEqual({ playerId: 'alice', total: 3 });
     expect(reveal.last).toBe(false);
   });
 
-  it('chains the questions, adds the points up, then ends with the ranking', () => {
+  it('chains the questions, counts the votes of each one apart, and ends with no ranking', () => {
     const g = play(2);
     toVoting(g);
     voteAll(g, () => 'alice');
@@ -135,11 +134,17 @@ describe('Qui est le + ?', () => {
     expect(view(g, 'bob', 'voting').myVote).toBeNull();
     voteAll(g, (voter) => (voter === 'alice' ? 'bob' : 'carol'));
     g.act('alice', 'reveal');
-    expect(view(g, 'bob', 'reveal').last).toBe(true);
+    const second = view(g, 'bob', 'reveal');
+    expect(second.results.slice(0, 2)).toEqual([
+      { playerId: 'carol', votes: 3 },
+      { playerId: 'bob', votes: 1 },
+    ]);
+    // Alice's votes of the first question do not carry over.
+    expect(second.results.find((r) => r.playerId === 'alice')!.votes).toBe(0);
+    expect(second.last).toBe(true);
     g.act('alice', 'next');
     expect(g.ended).toBe(true);
-    const score = (id: string) => g.ranking?.find((r) => r.playerId === id)?.score;
-    expect([score('alice'), score('bob'), score('carol'), score('dave')]).toEqual([4, 1, 3, 0]);
+    expect(g.ranking).toEqual([]);
   });
 
   it('can finish early and deletes every picture', () => {

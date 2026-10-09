@@ -14,7 +14,7 @@ const NAMES = ['Alice', 'Bob', 'Carol'];
 // Any picture of a person will do: the cut-out runs for real, with the production CSP.
 const PHOTO = 'design/presentateur.jpeg';
 
-test('a full game of Qui est le + ? with three players: pictures, votes, reveals, ranking', async ({
+test('a full game of Qui est le + ? with three players: pictures, votes, reveals, back to the lobby', async ({
   browser,
 }) => {
   players = await Promise.all(NAMES.map((name) => openPlayer(browser, name)));
@@ -49,7 +49,7 @@ test('a full game of Qui est le + ? with three players: pictures, votes, reveals
     await expect(player.page.getByRole('list', { name: 'Votez pour une tête' })).toBeVisible();
     await player.page.getByRole('button', { name: 'Bob', exact: true }).click();
     await player.page.getByRole('button', { name: /^Voter pour Bob/ }).click();
-    await expect(player.page.getByText('Vote enregistré.')).toBeVisible();
+    await expect(player.page.getByText('Vote enregistré')).toBeVisible();
     await expect(player.page.getByRole('button', { name: 'Alice', exact: true })).toBeDisabled();
   }
   await alice.page.getByRole('button', { name: 'Révéler les résultats' }).click();
@@ -70,16 +70,10 @@ test('a full game of Qui est le + ? with three players: pictures, votes, reveals
   }
   await alice.page.getByRole('button', { name: 'Révéler les résultats' }).click();
   await expect(alice.page.getByRole('list', { name: 'Gagnants' })).toContainText('Carol');
-  await alice.page.getByRole('button', { name: 'Voir le classement final' }).click();
-
-  // Bob 3, Carol 2, Alice 1.
-  for (const player of players) {
-    await expect(player.page.getByText('Classement final · Qui est le + ?')).toBeVisible();
-  }
-  const rows = alice.page.getByRole('listitem').filter({ hasText: /pts?$/ });
-  await expect(rows.nth(0)).toContainText('Bob');
-  await expect(rows.nth(1)).toContainText('Carol');
-  await expect(rows.nth(2)).toContainText('Alice');
-
+  // The last question: no ranking, everyone goes straight back to the lobby.
   await alice.page.getByRole('button', { name: 'Retour au salon' }).click();
+  for (const player of players) {
+    await expect(player.page.getByRole('heading', { name: /Joueurs/ })).toBeVisible();
+  }
+  await expect(alice.page.getByRole('button', { name: 'Lancer la partie' })).toBeVisible();
 });

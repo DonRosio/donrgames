@@ -664,12 +664,19 @@ export class RoomManager {
   ): void {
     if (room.runner !== runner) return;
     room.runner = null;
-    room.status = 'results';
     // Idle time is not counted while playing: restart it now, not from the last action.
     this.#touch(room);
+    const { meta } = contractOf(runner.definition);
+    if (meta.ranked === false) {
+      // A game played for fun: no ranking, straight back to the lobby.
+      this.#backToLobby(room);
+      this.#events.roomChanged(room);
+      return;
+    }
+    room.status = 'results';
     this.media.deleteRoom(room.id);
     room.results = {
-      gameId: contractOf(runner.definition).meta.id,
+      gameId: meta.id,
       ranking: rank(scores).map((entry) => ({
         playerId: entry.playerId,
         nickname: nicknames.get(entry.playerId) ?? '?',

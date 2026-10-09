@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { HeadPicker } from '../../core/ui/HeadPicker.tsx';
 import { HEAD_MAX_BYTES } from '@mini-jeux/shared/games/whos-most-data';
+import { HeadPicker } from '../../core/ui/HeadPicker.tsx';
 import { HeadFrame, useHeadPictures } from './common.tsx';
 import type { ScreenProps } from './common.tsx';
+import { Brush, BrushButton } from './Brush.tsx';
 import styles from './whos-most.module.css';
 
 export function PhotosScreen({
@@ -60,44 +61,48 @@ export function PhotosScreen({
       </div>
 
       <ul className={styles.grid} aria-label="Têtes des joueurs">
-        {view.heads.map((head) => (
+        {view.heads.map((head, index) => (
           <li key={head.playerId}>
             <HeadFrame
+              playerId={head.playerId}
               name={name(head.playerId)}
               src={head.mediaId ? (pictures[head.mediaId] ?? null) : null}
-              {...(head.mediaId ? {} : { state: 'dim' as const })}
+              state={head.mediaId ? undefined : 'dim'}
             >
-              <span className={styles.caption}>{head.mediaId ? '✓ Prête' : 'En attente…'}</span>
+              <Brush seed={index + 1}>
+                <span className={styles.label}>{head.mediaId ? 'Prêt' : 'En attente'}</span>
+              </Brush>
             </HeadFrame>
           </li>
         ))}
       </ul>
 
-      {isHost ? (
-        <div className={`card ${styles.center}`}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!view.canStart}
-            onClick={() => void start()}
-          >
-            Lancer les questions
-          </button>
-          {missing > 0 && (
-            <p className="muted">
-              {missing} joueur{missing > 1 ? 's' : ''} n'{missing > 1 ? 'ont' : 'a'} pas encore
-              envoyé de photo. « Passer à la suite » lance quand même, sans leur photo.
-            </p>
-          )}
-          {error && (
-            <p className="error" role="alert">
+      <div className={styles.bottom}>
+        {isHost ? (
+          <>
+            <BrushButton seed={21} disabled={!view.canStart} onClick={() => void start()}>
+              Lancer les questions
+            </BrushButton>
+            {missing > 0 && (
+              <Brush size="text" seed={22}>
+                {missing > 1 ? 'Des joueurs n’ont' : 'Un joueur n’a'} pas encore envoyé de photo : «
+                Passer à la suite » lance quand même, sans photo
+              </Brush>
+            )}
+          </>
+        ) : (
+          <Brush size="text" seed={23}>
+            L'hôte lance les questions quand tout le monde est prêt
+          </Brush>
+        )}
+        {error && (
+          <Brush size="text" seed={24}>
+            <span className="error" role="alert">
               {error}
-            </p>
-          )}
-        </div>
-      ) : (
-        <p className={styles.hint}>L'hôte lance les questions quand tout le monde est prêt.</p>
-      )}
+            </span>
+          </Brush>
+        )}
+      </div>
     </section>
   );
 }

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { MediaRef } from '@mini-jeux/shared';
 import type { Head, WhosMostContract, WhosMostView } from '@mini-jeux/shared/games/whos-most';
 import type { GameScreenProps } from '../../core/game-host/client-game.ts';
+import { Brush } from './Brush.tsx';
+import { floatStyle, questionSeed } from './layout.ts';
 import styles from './whos-most.module.css';
 
 export type ScreenProps<P extends WhosMostView['phase']> = GameScreenProps<
@@ -53,41 +56,73 @@ export function useHeadPictures(heads: Head[], fetchMedia: FetchMedia): Record<s
   return loaded;
 }
 
-/** A head in its frame, with the nickname above; a player without picture shows their initial. */
+/** "0 vote", "1 vote", "3 votes". */
+export function votesLabel(votes: number): string {
+  return `${votes} vote${votes > 1 ? 's' : ''}`;
+}
+
+/**
+ * A head in its frame (a thick dark outline, a light ring, a coloured inside), with the nickname
+ * on the top edge. The frame floats very slightly, each one at its own pace. A player without a
+ * picture shows their initial.
+ */
 export function HeadFrame({
+  playerId,
   name,
   src,
   state,
+  size = 128,
+  tilt = 0,
   children,
 }: {
+  playerId: string;
   name: string;
   src: string | null;
-  /** 'chosen': highlighted (selected, or winner). 'dim': set aside. */
-  state?: 'chosen' | 'dim';
-  children?: React.ReactNode;
+  /** 'chosen': highlighted (selected, or most voted). 'dim': set aside. */
+  state?: 'chosen' | 'dim' | undefined;
+  /** Width of the frame, in px. */
+  size?: number;
+  /** Rotation, in degrees. */
+  tilt?: number;
+  /** Shown under the frame (the number of votes…). */
+  children?: ReactNode;
 }) {
+  // Long nicknames get smaller letters, to stay on the edge of the frame.
+  const length = [...name].length;
+  const style = {
+    '--size': `${size}px`,
+    '--tilt': `${tilt}deg`,
+    '--name-scale': Math.min(1, 7 / Math.max(length, 1)).toFixed(2),
+    ...floatStyle(playerId),
+  } as CSSProperties;
   return (
-    <div className={`${styles.head} ${state ? styles[state] : ''}`}>
-      <span className={styles.name}>{name}</span>
-      <div className={styles.picture}>
-        {src ? (
-          <img src={src} alt="" draggable={false} />
-        ) : (
-          <span className={styles.initial} aria-hidden="true">
-            {[...name][0]?.toUpperCase()}
-          </span>
-        )}
-      </div>
+    // Spans only: the frame also sits inside a button (the ballot).
+    <span className={`${styles.head} ${state ? styles[state] : ''}`} style={style}>
+      <span className={styles.frame}>
+        <span className={styles.picture}>
+          {src ? (
+            <img src={src} alt="" draggable={false} />
+          ) : (
+            <span className={styles.initial} aria-hidden="true">
+              {[...name][0]?.toUpperCase()}
+            </span>
+          )}
+        </span>
+        <span className={styles.name}>{name}</span>
+      </span>
       {children}
-    </div>
+    </span>
   );
 }
 
+/** "Qui est le +" (script) over the adjective (rounded), on a brush. */
 export function QuestionTitle({ question }: { question: string }) {
   return (
     <h2 className={styles.question}>
-      <span>Qui est le +</span>
-      <strong>{question}</strong>
+      <Brush size="title" seed={Math.abs(questionSeed(question, 0)) % 997}>
+        <span className={styles.lead}>Qui est le +</span>
+        <span className={styles.adjective}>{question}</span>
+      </Brush>
     </h2>
   );
 }
