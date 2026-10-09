@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Keeps the SHA-pinned actions of .github/workflows up to date.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: ci
+
+  # npm dependencies are not updated by pull requests (the project commits straight to main):
+  # the weekly audit of the CI reports a newly disclosed vulnerability, and Dependabot alerts
+  # (repository setting) do the same by e-mail.

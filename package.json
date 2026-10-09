@@ -24,7 +24,8 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "test:e2e": "npm run build && playwright test",
     "build": "npm run build -w @mini-jeux/client",
-    "start": "NODE_ENV=production node --env-file-if-exists=.env server/src/index.ts"
+    "start": "NODE_ENV=production node --env-file-if-exists=.env server/src/index.ts",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

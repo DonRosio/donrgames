@@ -44,7 +44,30 @@
 | HTTPS dépend du déploiement.                                                                                                                                                                 | À vérifier  | Caddy (étape 8) ; HSTS et `upgrade-insecure-requests` s'activent automatiquement avec une origine `https://`.                            |
 | Jeton en `sessionStorage` : lisible par un script injecté.                                                                                                                                   | Faible      | CSP stricte, aucun HTML injecté, aucune dépendance chargée à l'exécution.                                                                |
 
-## 5. Limites des tests
+## 5. Revue de « Qui est le + ? » (octobre 2026)
+
+Nouvelle surface : envoi d'une photo par joueur (PNG), relue par tous les joueurs du salon ; détourage dans le navigateur (WebAssembly, d'où `'wasm-unsafe-eval'` dans `script-src`) ; questions lues depuis `content/whos-most/selection.txt`.
+
+| Problème                                                                                                                                                                                       | Gravité | Correction                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Seule la signature PNG était vérifiée : un fichier de moins de 1 Mo pouvait annoncer 50 000 × 50 000 pixels (bombe de décompression) et épuiser la mémoire des navigateurs des autres joueurs. | Faible  | Le serveur exige un en-tête `IHDR` valide et au plus 1024 px de côté (`MAX_IMAGE_SIDE`, `core/media/sniff.ts`) ; le client envoie 512 px. Tests. |
+
+Vérifié : photos servies uniquement par la route authentifiée (`no-store`, `image/png`, `nosniff`), aux seuls participants, pendant la partie ; supprimées par le jeu en fin de partie et par le socle (fin, abandon, fermeture, 2 h au plus) ; jamais sur disque. Le vote ne vise qu'un joueur présent (zod puis contrôle du jeu). Les questions sont affichées comme du texte (React l'échappe). Le modèle et le WASM de MediaPipe sont servis par le site lui-même (modèle committé, WASM figé par l'empreinte de `package-lock.json`).
+
+| Risque restant                                                                                                                                                 | Gravité     | Parade actuelle ou possible                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Tout joueur du salon peut garder les photos des autres (il les télécharge pour les afficher).                                                                  | Faible      | Inhérent au jeu, comme les prises ; entre amis.                                                                               |
+| Une photo déplacée (n'importe quelle image PNG valide) est montrée à tous.                                                                                     | Faible      | Exclusion par l'hôte ; jeu entre amis.                                                                                        |
+| `'wasm-unsafe-eval'` autorise la compilation de WebAssembly par les scripts du site.                                                                           | Très faible | Aucun `eval` JavaScript ; seuls les scripts du site (`'self'`) s'exécutent, un script injecté pourrait déjà tout faire en JS. |
+| Une partie de plus de 2 h perdrait ses photos (durée de vie maximale des médias) : têtes remplacées par les initiales. Pas une faille, une limite à connaître. | —           | Garder des parties courtes, ou allonger `ttlMs` si le cas se présente.                                                        |
+
+## 6. Sécurité du dépôt
+
+- **Avant chaque commit** (`.githooks/pre-commit`, activé par `npm install`) : gitleaks cherche un secret dans les changements indexés, Prettier vérifie le format des fichiers indexés. Un commit qui échoue est refusé.
+- **GitHub Actions** (`.github/workflows/ci.yml`), à chaque push sur `main` et **chaque lundi** : `npm run check`, build, `npm audit`, gitleaks sur tout l'historique. Un échec envoie un e-mail à l'auteur du dépôt : c'est ainsi qu'une vulnérabilité découverte dans une dépendance existante est signalée sans que personne ne pousse. Actions figées par empreinte SHA, jeton en lecture seule.
+- **Dependabot** (`.github/dependabot.yml`) tient à jour les empreintes des actions. Les dépendances npm ne sont pas mises à jour par pull request (le projet commite sur `main`) : l'audit hebdomadaire et les alertes Dependabot (réglage du dépôt) préviennent.
+
+## 7. Limites des tests
 
 - Le micro est simulé (bip de Chrome) : les tests prouvent l'enchaînement complet (enregistrement, envoi, décodage et lecture des prises chez chaque joueur, votes, classement), pas la qualité de la synchro audio/vidéo, qui reste à juger à l'oreille.
 - Les tests utilisent la plus courte vidéo valide de `content/dubbing` : sans vidéo, ils ne démarrent pas.

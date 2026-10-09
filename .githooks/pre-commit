@@ -1,0 +1,14 @@
+#!/bin/sh
+# Before each commit: no secret in the staged changes, and the staged files formatted.
+# Enabled per clone by `npm install` (script "prepare": git config core.hooksPath .githooks).
+set -eu
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit : gitleaks introuvable, commit refusé (voir CLAUDE.md, « Sécurité du dépôt »)." >&2
+  exit 1
+fi
+gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml
+
+# Only the staged files (not the whole tree): fast, and unstaged work does not block the commit.
+git diff --cached --name-only --diff-filter=ACMR -z |
+  xargs -0 --no-run-if-empty npx --no-install prettier --check --ignore-unknown
