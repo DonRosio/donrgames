@@ -152,7 +152,7 @@ describe('HTTP API', () => {
     const response = await built.app.inject('/api/health');
     const csp = String(response.headers['content-security-policy']);
     expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain("script-src 'self'");
+    expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(response.headers).toMatchObject({
       'x-content-type-options': 'nosniff',

@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import { defineContract } from '../core/game.ts';
-import { WHOS_MOST_QUESTIONS } from './whos-most-questions.ts';
-
-/** Largest picture accepted: a 512 px PNG with transparency stays far below. */
-export const HEAD_MAX_BYTES = 1024 * 1024;
+import { WHOS_MOST_QUESTIONS } from './whos-most-data.ts';
 
 export const whosMostContract = defineContract({
   meta: {

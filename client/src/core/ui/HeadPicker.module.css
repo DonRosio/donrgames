@@ -1,0 +1,57 @@
+.picker {
+  display: grid;
+  justify-items: center;
+  gap: var(--gap);
+}
+
+.preview {
+  width: min(360px, 100%);
+  aspect-ratio: 1;
+  border: var(--frame);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-frame);
+  cursor: grab;
+  touch-action: none;
+}
+
+.preview:active {
+  cursor: grabbing;
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(360px, 100%);
+  color: var(--text-muted);
+}
+
+.zoom input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.choose {
+  cursor: pointer;
+}
+
+.message {
+  margin: 0;
+  color: var(--danger);
+  text-align: center;
+}

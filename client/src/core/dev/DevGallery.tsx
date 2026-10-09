@@ -5,6 +5,7 @@ import { localNow } from '../session/clock.ts';
 import { ConfirmDialog } from '../ui/ConfirmDialog.tsx';
 import { ConnectionBanner } from '../ui/ConnectionBanner.tsx';
 import { Countdown } from '../ui/Countdown.tsx';
+import { HeadPicker } from '../ui/HeadPicker.tsx';
 import { PlayerList } from '../ui/PlayerList.tsx';
 import { RankingScreen } from '../ui/RankingScreen.tsx';
 import { RoundTransition } from '../ui/RoundTransition.tsx';
@@ -54,6 +55,7 @@ export function DevGallery() {
   const [revealKey, setRevealKey] = useState(0);
   const [transition, setTransition] = useState(false);
   const [holdTransition, setHoldTransition] = useState(false);
+  const [pickedHead, setPickedHead] = useState<string | null>(null);
 
   return (
     <main className={styles.page}>
@@ -117,6 +119,21 @@ export function DevGallery() {
         <button type="button" className="btn btn-small" onClick={() => setRevealKey((k) => k + 1)}>
           Rejouer l'animation
         </button>
+      </Section>
+
+      <Section title="HeadPicker (détourage dans le navigateur)">
+        <HeadPicker
+          maxBytes={1024 * 1024}
+          submitLabel="Valider ma tête"
+          onSubmit={async (png) => {
+            setPickedHead((previous) => {
+              if (previous) URL.revokeObjectURL(previous);
+              return URL.createObjectURL(png);
+            });
+            return { ok: true };
+          }}
+        />
+        {pickedHead && <img src={pickedHead} alt="Tête envoyée" width={128} height={128} />}
       </Section>
 
       <Section title="Countdown">

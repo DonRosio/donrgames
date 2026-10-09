@@ -15,7 +15,8 @@ export async function registerSecurity(app: FastifyInstance, config: Config): Pr
       useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+        // WebAssembly only (head cut-out); no 'unsafe-eval' for JavaScript.
+        scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
         styleSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'blob:'],
         mediaSrc: ["'self'", 'blob:'],

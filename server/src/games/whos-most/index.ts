@@ -1,6 +1,6 @@
-import { HEAD_MAX_BYTES, whosMostContract } from '@mini-jeux/shared/games/whos-most';
+import { whosMostContract } from '@mini-jeux/shared/games/whos-most';
 import type { Head, WhosMostContract, WhosMostView } from '@mini-jeux/shared/games/whos-most';
-import { WHOS_MOST_QUESTIONS } from '@mini-jeux/shared/games/whos-most-questions';
+import { HEAD_MAX_BYTES, WHOS_MOST_QUESTIONS } from '@mini-jeux/shared/games/whos-most-data';
 import { defineGame } from '../../core/engine/types.ts';
 import type { GameContext, Roster } from '../../core/engine/types.ts';
 
