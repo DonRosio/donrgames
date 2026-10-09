@@ -25,7 +25,7 @@
     "test:e2e": "npm run build && playwright test",
     "build": "npm run build -w @mini-jeux/client",
     "start": "NODE_ENV=production node --env-file-if-exists=.env server/src/index.ts",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "test -d .git && git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
