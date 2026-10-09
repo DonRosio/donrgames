@@ -1,6 +1,6 @@
 import { whosMostContract } from '@mini-jeux/shared/games/whos-most';
 import type { Head, WhosMostContract, WhosMostView } from '@mini-jeux/shared/games/whos-most';
-import { HEAD_MAX_BYTES, WHOS_MOST_QUESTIONS } from '@mini-jeux/shared/games/whos-most-data';
+import { HEAD_MAX_BYTES } from '@mini-jeux/shared/games/whos-most-data';
 import { defineGame } from '../../core/engine/types.ts';
 import type { GameContext, Roster } from '../../core/engine/types.ts';
 
@@ -57,10 +57,23 @@ function question(state: WhosMostState) {
   };
 }
 
+/** Draws the questions of the game among those not asked yet in the room. */
+function drawQuestions(ctx: Ctx, count: number): string[] {
+  const questions: string[] = [];
+  while (questions.length < count) {
+    const item = ctx.content.pick();
+    if (!item) break;
+    ctx.content.markPlayed(item.id);
+    questions.push(item.title);
+  }
+  return questions;
+}
+
 export const whosMostGame = defineGame({
   contract: whosMostContract,
+  content: 'text',
   setup: (ctx, { players, settings }): WhosMostState => ({
-    questions: ctx.random.shuffle([...WHOS_MOST_QUESTIONS]).slice(0, settings.questions),
+    questions: drawQuestions(ctx, settings.questions),
     index: 0,
     photos: new Map(),
     votes: new Map(),

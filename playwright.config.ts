@@ -12,6 +12,9 @@ const args = [
   '--use-fake-device-for-media-stream',
   '--use-fake-ui-for-media-stream',
   '--autoplay-policy=no-user-gesture-required',
+  // Software WebGL: the head cut-out (MediaPipe) needs it, headless or not.
+  '--use-angle=swiftshader',
+  '--enable-unsafe-swiftshader',
 ];
 
 const projects: Project[] = [

@@ -76,3 +76,19 @@ describe('content library', () => {
     expect(library.items.length).toBeGreaterThan(0);
   });
 });
+
+describe('text content library', () => {
+  it('reads one item per line, skips comments, and reports duplicates and long lines', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'content-'));
+    const folder = path.join(root, 'questions');
+    mkdirSync(folder);
+    writeFileSync(
+      path.join(folder, 'selection.txt'),
+      ['# comment', 'sale', '', 'Fort aux jeux vidéo', 'SALE', 'x'.repeat(81)].join('\n'),
+    );
+    const library = loadContentLibrary(root, 'questions', 'text');
+    expect(library.items.map((item) => item.title)).toEqual(['sale', 'Fort aux jeux vidéo']);
+    expect(library.items[0]).toMatchObject({ id: 'sale', durationMs: 0, file: '' });
+    expect(library.problems).toHaveLength(2);
+  });
+});

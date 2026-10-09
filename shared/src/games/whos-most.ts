@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { defineContract } from '../core/game.ts';
-import { WHOS_MOST_QUESTIONS } from './whos-most-data.ts';
 
 export const whosMostContract = defineContract({
   meta: {
@@ -10,7 +9,9 @@ export const whosMostContract = defineContract({
       'Une question du genre « Qui est le + sale ? », et tout le monde vote pour une tête. Chaque vote vaut un point.',
     minPlayers: 3,
     maxPlayers: 10,
-    replayable: true,
+    contentUnit: 'question',
+    // The questions are the content of the game: never twice the same in a room.
+    replayable: false,
   },
   phases: ['photos', 'voting', 'reveal'],
   settings: {
@@ -18,8 +19,8 @@ export const whosMostContract = defineContract({
       kind: 'int',
       label: 'Nombre de questions',
       min: 1,
-      max: WHOS_MOST_QUESTIONS.length,
-      default: Math.min(10, WHOS_MOST_QUESTIONS.length),
+      max: 'contentLeft',
+      default: 10,
     },
   },
   actions: {

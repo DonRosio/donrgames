@@ -138,8 +138,11 @@ export interface GameDefinition<
   /** Host's "Passer à la suite": stop waiting for the players who are late. */
   onSkip?(state: S, ctx: GameContext<C>): void;
   onPlayerChange?(state: S, ctx: GameContext<C>, change: PlayerChange): void;
-  /** The game uses the content library of content/<id>/ (non-replayable games). */
-  content?: true;
+  /**
+   * The game uses the content library of content/<id>/ (non-replayable games): video clips
+   * (`true`) or lines of text such as questions (`'text'`, nothing to download).
+   */
+  content?: true | 'text';
   /**
    * Maximum size in bytes of a file of this kind from this player, right now; null refuses
    * (checked before the body is received).

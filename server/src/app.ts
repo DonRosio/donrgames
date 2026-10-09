@@ -82,7 +82,9 @@ export async function buildApp(options: AppOptions): Promise<App> {
   for (const game of games) {
     if (!game.content) continue;
     const id = (game.contract as GameContract).meta.id;
-    const library = options.content?.get(id) ?? loadContentLibrary(config.contentDir, id);
+    const library =
+      options.content?.get(id) ??
+      loadContentLibrary(config.contentDir, id, game.content === 'text' ? 'text' : 'video');
     for (const problem of library.problems) app.log.warn({ game: id }, `content: ${problem}`);
     app.log.info({ game: id, items: library.items.length }, 'content loaded');
     content.set(id, library);

@@ -15,7 +15,10 @@ export async function openPlayer(browser: Browser, name: string): Promise<Player
   const page = await context.newPage();
   const errors: string[] = [];
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
+    // MediaPipe logs its information lines ("INFO: …") through console.error.
+    if (message.type() === 'error' && !message.text().startsWith('INFO:')) {
+      errors.push(message.text());
+    }
   });
   page.on('pageerror', (error) => errors.push(error.message));
   return { name, page, errors };

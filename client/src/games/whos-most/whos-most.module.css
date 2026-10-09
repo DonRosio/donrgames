@@ -1,0 +1,272 @@
+.screen {
+  display: grid;
+  gap: var(--gap);
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.counter,
+.step {
+  padding: 2px 14px;
+  border: 1px solid rgb(255 232 170 / 28%);
+  border-radius: 999px;
+  background: rgb(30 18 22 / 84%);
+  box-shadow: var(--shadow-button);
+  font-weight: 700;
+}
+
+.counter {
+  color: var(--text-muted);
+}
+
+.step {
+  color: var(--accent-strong);
+  font-size: 1.2rem;
+}
+
+.center {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.big {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.hint {
+  justify-self: center;
+  padding: 4px 18px;
+  border: 1px solid #b89a5e;
+  border-radius: var(--radius-small);
+  background: #f6ecd2;
+  box-shadow: var(--shadow-button);
+  color: #2a1a05;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.question {
+  display: grid;
+  justify-items: center;
+  margin: 0;
+  padding: 14px 28px;
+  border: 1px solid rgb(255 232 170 / 28%);
+  border-radius: var(--radius);
+  background: rgb(30 18 22 / 84%);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+  justify-self: center;
+}
+
+.question span {
+  color: var(--text-muted);
+  font-size: 1.3rem;
+}
+
+.question strong {
+  color: var(--accent-strong);
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  line-height: 1.15;
+}
+
+.grid,
+.podium {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.podium {
+  gap: 28px;
+}
+
+/* A head: thick dark outline, cream line, warm background; nickname on top, like the wireframes. */
+.head {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 128px;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.podium .head {
+  width: 190px;
+}
+
+.name {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 4px;
+  color: var(--text);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 4px var(--ink),
+    0 2px 2px var(--ink);
+  white-space: nowrap;
+}
+
+.picture {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 4px solid var(--ink);
+  border-radius: var(--radius);
+  outline: 3px solid #ecd39a;
+  outline-offset: -7px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-frame);
+}
+
+.picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.initial {
+  color: var(--accent-strong);
+  font-size: 3.4rem;
+  font-weight: 800;
+}
+
+.caption,
+.votes {
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgb(30 18 22 / 84%);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.votes {
+  color: var(--accent-strong);
+  font-size: 1.1rem;
+}
+
+.chosen .picture {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 0 26px rgb(247 181 68 / 70%);
+}
+
+.chosen {
+  transform: scale(1.04);
+}
+
+.dim {
+  opacity: 0.5;
+}
+
+.pick {
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pick:disabled {
+  cursor: default;
+}
+
+.pick:hover:not(:disabled) .head {
+  transform: translateY(-4px);
+}
+
+.pick:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.board {
+  width: min(480px, 100%);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Heads appear one after the other during the reveal. */
+.pop {
+  animation: pop 0.5s var(--delay, 0ms) both cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  top: -20px;
+  animation-name: fall;
+  animation-fill-mode: both;
+  animation-timing-function: linear;
+}
+
+@keyframes fall {
+  from {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  to {
+    transform: translateY(110vh) rotate(var(--turn));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop,
+  .confetti span {
+    animation: none;
+  }
+
+  .confetti {
+    display: none;
+  }
+}

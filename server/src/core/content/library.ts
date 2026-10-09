@@ -2,13 +2,14 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { probeMp4 } from './mp4.ts';
 
-/** A playable content item (for now: a video clip). */
+/** A content item: a video clip, or a line of text (a question). */
 export interface ContentItem {
   /** Stable id derived from the file name: it is what devices remember as "already seen". */
   id: string;
   title: string;
+  /** 0 for a text item. */
   durationMs: number;
-  /** Absolute path, never sent to clients. */
+  /** Absolute path, never sent to clients; '' for a text item (nothing to download). */
   file: string;
   size: number;
 }
@@ -36,11 +37,20 @@ export function contentIdOf(fileName: string): string {
     .slice(0, 64);
 }
 
+export type ContentKind = 'video' | 'text';
+
+export const MAX_TEXT_LENGTH = 80;
+
 /**
- * Reads `<contentDir>/<gameId>/selection.txt`: one "file | title" line per video.
+ * Reads `<contentDir>/<gameId>/selection.txt`: one "file | title" line per video, or, for a
+ * game of text content, one line of text per item (its title and the source of its id).
  * Invalid lines are reported and skipped; a missing folder simply means no content.
  */
-export function loadContentLibrary(contentDir: string, gameId: string): ContentLibrary {
+export function loadContentLibrary(
+  contentDir: string,
+  gameId: string,
+  kind: ContentKind = 'video',
+): ContentLibrary {
   const folder = path.join(contentDir, gameId);
   const selection = path.join(folder, 'selection.txt');
   const library: ContentLibrary = { gameId, items: [], problems: [] };
@@ -55,6 +65,15 @@ export function loadContentLibrary(contentDir: string, gameId: string): ContentL
     const line = raw.trim();
     if (line === '' || line.startsWith('#')) return;
     const problem = (message: string) => library.problems.push(`ligne ${index + 1} : ${message}`);
+
+    if (kind === 'text') {
+      if (line.length > MAX_TEXT_LENGTH) return problem(`texte trop long (${MAX_TEXT_LENGTH} caractères max)`);
+      const id = contentIdOf(line);
+      if (id === '' || ids.has(id)) return problem(`texte en double ou sans lettre « ${line} »`);
+      ids.add(id);
+      library.items.push({ id, title: line, durationMs: 0, file: '', size: 0 });
+      return;
+    }
 
     const separator = line.indexOf('|');
     if (separator === -1) return problem('format attendu « fichier | titre »');

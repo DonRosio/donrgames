@@ -12,8 +12,8 @@ const UNAVAILABLE: Record<string, (info: GameInfo) => string> = {
   TOO_MANY_PLAYERS: (info) => `Ce jeu accepte au plus ${info.meta.maxPlayers} joueurs.`,
   WRONG_PLAYER_COUNT: (info) =>
     `Ce jeu se joue à exactement ${playerCountLabel(info.meta)} connectés.`,
-  NO_CONTENT_LEFT: () =>
-    'Toutes les vidéos ont déjà été jouées dans ce salon. Ajoute-en dans selection.txt et redémarre le serveur.',
+  NO_CONTENT_LEFT: (info) =>
+    `Toutes les ${info.meta.contentUnit ?? 'vidéo'}s ont déjà été jouées dans ce salon. Ajoute-en dans selection.txt et redémarre le serveur.`,
 };
 
 interface GamePanelProps {
@@ -80,8 +80,9 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
               <p className={styles.content}>{playerCountLabel(info.meta)}</p>
               {availability?.content && (
                 <p className={styles.content}>
-                  {availability.content.left} vidéo{availability.content.left > 1 ? 's' : ''} pas
-                  encore jouée{availability.content.left > 1 ? 's' : ''} dans ce salon
+                  {availability.content.left} {info.meta.contentUnit ?? 'vidéo'}
+                  {availability.content.left > 1 ? 's' : ''} pas encore jouée
+                  {availability.content.left > 1 ? 's' : ''} dans ce salon
                 </p>
               )}
             </div>

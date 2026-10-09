@@ -5,9 +5,18 @@ import { validateGameDefinition } from '../../core/engine/validate.ts';
 import { whosMostGame } from './index.ts';
 
 const PLAYERS = ['alice', 'bob', 'carol', 'dave'];
+const QUESTIONS = Array.from({ length: 12 }, (_, index) => ({
+  id: `q${index}`,
+  title: `adjectif ${index}`,
+  durationMs: 0,
+}));
 
 function play(questions = 2, players = PLAYERS) {
-  return createHarness(whosMostGame, { players, settings: { questions } });
+  return createHarness(whosMostGame, {
+    players,
+    settings: { questions },
+    content: QUESTIONS,
+  });
 }
 
 type G = ReturnType<typeof play>;
@@ -32,9 +41,11 @@ describe('Qui est le + ?', () => {
     expect(() => validateGameDefinition(whosMostGame)).not.toThrow();
   });
 
-  it('draws distinct questions', () => {
+  it('draws distinct questions and marks them as asked in the room', () => {
     const g = play(8);
     expect(new Set(g.state.questions).size).toBe(8);
+    expect(g.played).toHaveLength(8);
+    expect(view(g, 'alice', 'photos').heads).toHaveLength(4);
   });
 
   it('needs a picture from everyone present before the host starts', () => {

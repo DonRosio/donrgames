@@ -11,6 +11,8 @@ export interface GameMeta {
   maxPlayers: number;
   /** Only these numbers of players are allowed (e.g. [5, 10]); any count in the bounds otherwise. */
   playerCounts?: readonly number[];
+  /** Singular name of one content item, in French (default: 'vidéo'; e.g. 'question'). */
+  contentUnit?: string;
   /** false: the game consumes its content ("à usage unique" badge, played content tracking). */
   replayable: boolean;
 }

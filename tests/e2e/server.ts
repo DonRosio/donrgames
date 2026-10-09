@@ -25,7 +25,24 @@ if (!clip) {
 
 const { app } = await buildApp({
   config,
-  content: new Map([['dubbing', { gameId: 'dubbing', items: [clip], problems: [] }]]),
+  content: new Map([
+    ['dubbing', { gameId: 'dubbing', items: [clip], problems: [] }],
+    // Questions of "Qui est le + ?": fixed here, whatever content/whos-most holds.
+    [
+      'whos-most',
+      {
+        gameId: 'whos-most',
+        items: ['sale', 'sportif', 'drôle', 'têtu'].map((title) => ({
+          id: title,
+          title,
+          durationMs: 0,
+          file: '',
+          size: 0,
+        })),
+        problems: [],
+      },
+    ],
+  ]),
 });
 await app.listen({ host: config.host, port: config.port });
 console.log(`E2E : ${E2E_ORIGIN}, vidéo « ${clip.id} » (${(clip.durationMs / 1000).toFixed(1)} s)`);

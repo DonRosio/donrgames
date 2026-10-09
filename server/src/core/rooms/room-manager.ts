@@ -490,7 +490,8 @@ export class RoomManager {
     const runner = session.room.runner;
     if (!runner || contractOf(runner.definition).meta.id !== gameId) return null;
     const item = this.#content.get(gameId)?.items.find((candidate) => candidate.id === contentId);
-    if (!item) return null;
+    // A text item has no file to download.
+    if (!item || item.file === '') return null;
     return this.#canRead(session, { kind: 'content', id: contentId }) ? item : null;
   }
 
