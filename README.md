@@ -10,7 +10,7 @@ un salon, on partage son code, et on joue. Le site est en ligne sur https://www.
 - **Among Legends** : un jeu de rôles caché autour d'une vraie partie de League of Legends (5 ou 10
   joueurs). Chacun reçoit un rôle secret, joue sa partie, puis tout le monde vote pour deviner les rôles
   des autres à partir des statistiques.
-- **Désamorçage** : un jeu coopératif à 4, inspiré de *Keep Talking and Nobody Explodes*. Un démineur
+- **Désamorçage** : un jeu coopératif à 4, inspiré de _Keep Talking and Nobody Explodes_. Un démineur
   voit la bombe, trois experts se partagent le manuel. 8 types de modules tirés au hasard, chrono,
   sons générés dans le navigateur.
 
