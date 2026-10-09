@@ -71,7 +71,7 @@ export function HeadFrame({
   name,
   src,
   state,
-  size = 140,
+  size = 168,
   tilt = 0,
   children,
 }: {
