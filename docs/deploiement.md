@@ -125,7 +125,7 @@ ssh mini-jeux@serveur systemctl --user status mini-jeux
 ssh mini-jeux@serveur journalctl --user -u mini-jeux -f   # logs (aucune IP/pseudo/code, cf. revue-securite.md)
 ```
 
-## 5. Contenu (vidéos de Doublage)
+## 5. Contenu (vidéos de Doublage, questions de Qui est le + ?)
 
 `content/` n'est pas versionné (voir `.gitignore`) : il se copie à part, par `rsync`, comme prévu
 dans `architecture.md` §7.5.
@@ -135,6 +135,22 @@ ssh mini-jeux@serveur mkdir -p mini-jeux/current/content/dubbing
 rsync -avz --delete content/dubbing/ mini-jeux@serveur:mini-jeux/current/content/dubbing/
 ssh mini-jeux@serveur systemctl --user restart mini-jeux   # relit selection.txt au démarrage
 ```
+
+Les questions de « Qui est le + ? » sont un simple fichier texte (une ligne par question, voir
+`architecture.md` §7 quater), sans vidéo :
+
+```bash
+ssh mini-jeux@serveur mkdir -p mini-jeux/current/content/whos-most
+rsync -avz --delete content/whos-most/ mini-jeux@serveur:mini-jeux/current/content/whos-most/
+ssh mini-jeux@serveur systemctl --user restart mini-jeux   # relit selection.txt au démarrage
+```
+
+Sans ce dossier, le jeu s'affiche mais n'est pas lançable (« plus aucune question »). Faire cette
+copie **avant** le `git push prod main` : le push redémarre déjà le serveur, une seule fois.
+
+`npm ci` tourne dans un dossier sans `.git` : le script `prepare` de `package.json` ne fait donc
+rien hors d'un clone (sans cette garde, il écrirait dans la configuration du dépôt bare et
+désactiverait le hook `post-receive`).
 
 ## 6. Mises à jour
 
