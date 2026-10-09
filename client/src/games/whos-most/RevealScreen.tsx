@@ -107,7 +107,7 @@ export function RevealScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
                   playerId={result.playerId}
                   name={name(result.playerId)}
                   src={srcOf(result.playerId)}
-                  size={108}
+                  size={116}
                   tilt={spot?.tilt ?? 0}
                   state={result.votes === 0 ? 'dim' : undefined}
                 >

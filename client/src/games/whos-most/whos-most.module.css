@@ -75,12 +75,12 @@
 }
 
 .brushed-text {
-  max-width: min(780px, 100%);
-  padding: 22px 64px 31px;
+  max-width: min(640px, 100%);
+  padding: 18px 52px 25px;
 }
 
 .brushed-button {
-  padding: 22px 70px 31px;
+  padding: 18px 56px 25px;
 }
 
 .brush {
@@ -143,11 +143,11 @@
 }
 
 .brushed-button .brushedText {
-  font-size: 2.5rem;
+  font-size: 2rem;
 }
 
 .brushed-text .brushedText {
-  font-size: 1.75rem;
+  font-size: 1.4rem;
   line-height: 1.5;
 }
 
@@ -173,11 +173,11 @@
 
 /* The tally under the buttons: bigger on white. */
 .brushedLight .votes {
-  font-size: 1.65rem;
+  font-size: 1.3rem;
 }
 
 .brushed-label.brushedLight {
-  padding: 9px 30px 14px;
+  padding: 13px 26px 8px;
 }
 
 .brushedLight :global(.error) {
@@ -224,11 +224,12 @@
   outline-offset: 4px;
 }
 
-/* The bottom of a screen: texts and buttons on brushes, no box. */
+/* The bottom of a screen: texts and buttons on brushes, no box, set well apart from the heads. */
 .bottom {
   display: grid;
   justify-items: center;
-  gap: 14px;
+  gap: 10px;
+  margin-top: 30px;
   padding: 10px 0 24px;
 }
 
@@ -236,7 +237,7 @@
 
 .question {
   justify-self: center;
-  margin: 0;
+  margin: -14px 0 0;
   text-align: center;
   line-height: 1;
 }
@@ -283,7 +284,7 @@
 
 /* The ballot: five heads per row at most, like the wireframe. */
 .ballot {
-  max-width: calc(5 * 136px + 4 * 26px);
+  max-width: calc(5 * 156px + 4 * 26px);
   justify-self: center;
 }
 
@@ -432,7 +433,7 @@
 
 .stageTitle {
   position: absolute;
-  top: 0;
+  top: -14px;
   left: 50%;
   transform: translateX(-50%);
   width: max-content;

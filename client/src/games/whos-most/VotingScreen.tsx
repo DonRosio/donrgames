@@ -46,7 +46,7 @@ export function VotingScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
                 playerId={head.playerId}
                 name={name(head.playerId)}
                 src={head.mediaId ? (pictures[head.mediaId] ?? null) : null}
-                size={136}
+                size={156}
                 state={
                   selected === head.playerId ? 'chosen' : selected !== null ? 'dim' : undefined
                 }
