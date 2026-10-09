@@ -67,7 +67,7 @@
 }
 
 .brushed-label {
-  padding: 3px 24px 6px;
+  padding: 9px 26px;
 }
 
 .brushed-title {
@@ -76,11 +76,11 @@
 
 .brushed-text {
   max-width: min(680px, 100%);
-  padding: 20px 56px 28px;
+  padding: 24px 58px;
 }
 
 .brushed-button {
-  padding: 16px 58px 24px;
+  padding: 24px 62px;
 }
 
 .brush {
@@ -120,6 +120,12 @@
   line-height: 1.25;
   text-align: center;
   text-shadow: 0 2px 3px rgb(0 0 0 / 60%);
+  /*
+   * Centres the letters, not the line: the script font has a very tall line box (1.7 em above
+   * the baseline, 1 em below) around small letters. The box now goes from the top of the capitals
+   * to the baseline; the tails of the letters hang below it.
+   */
+  text-box: trim-both cap alphabetic;
 }
 
 /* The labels under a head (Sniglet, set by .label and .votes) keep their own font. */
@@ -133,6 +139,7 @@
   justify-items: center;
   font-family: inherit;
   font-size: inherit;
+  text-box: normal;
 }
 
 .brushed-button .brushedText {
