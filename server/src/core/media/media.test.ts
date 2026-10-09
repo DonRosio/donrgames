@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { MediaStore } from './media-store.ts';
-import { sniffAudio } from './sniff.ts';
+import { sniffMime } from './sniff.ts';
 
-describe('sniffAudio', () => {
+describe('sniffMime', () => {
   it('recognizes the accepted containers by their magic bytes', () => {
-    expect(sniffAudio(Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x01]))).toBe('audio/webm');
-    expect(sniffAudio(Buffer.from('OggS\x00\x02', 'latin1'))).toBe('audio/ogg');
-    expect(sniffAudio(Buffer.from('\x00\x00\x00\x18ftypM4A ', 'latin1'))).toBe('audio/mp4');
-    expect(sniffAudio(Buffer.from('<script>alert(1)</script>'))).toBeNull();
-    expect(sniffAudio(Buffer.alloc(0))).toBeNull();
+    expect(sniffMime(Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x01]))).toBe('audio/webm');
+    expect(sniffMime(Buffer.from('OggS\x00\x02', 'latin1'))).toBe('audio/ogg');
+    expect(sniffMime(Buffer.from('\x00\x00\x00\x18ftypM4A ', 'latin1'))).toBe('audio/mp4');
+    expect(sniffMime(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]))).toBe(
+      'image/png',
+    );
+    expect(sniffMime(Buffer.from([0x89, 0x50, 0x4e, 0x47]))).toBeNull();
+    expect(sniffMime(Buffer.from('<script>alert(1)</script>'))).toBeNull();
+    expect(sniffMime(Buffer.alloc(0))).toBeNull();
   });
 });
 

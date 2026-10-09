@@ -8,7 +8,7 @@ import { DomainError } from '../lib/errors.ts';
 import { FixedWindowLimiter } from '../lib/rate-limit.ts';
 import type { Clock } from '../lib/time.ts';
 import { parseInput } from '../lib/validation.ts';
-import { sniffAudio } from '../media/sniff.ts';
+import { sniffMime } from '../media/sniff.ts';
 import type { RoomManager, Session } from '../rooms/room-manager.ts';
 
 /** Hard ceiling for any upload body; each game sets a stricter limit per file. */
@@ -26,7 +26,7 @@ interface PendingUpload {
 }
 
 /**
- * Private files: recordings sent by the players (kept in RAM) and content files (videos).
+ * Private files: recordings and pictures sent by the players (kept in RAM) and content files (videos).
  * Everything requires the session token, and the running game decides who may read what, when.
  */
 export function registerMediaRoutes(
@@ -46,7 +46,7 @@ export function registerMediaRoutes(
   };
 
   app.addContentTypeParser(
-    /^audio\//,
+    /^(audio\/|image\/png$)/,
     { parseAs: 'buffer', bodyLimit: MAX_UPLOAD_BYTES },
     (_request, body, done) => done(null, body),
   );
@@ -81,7 +81,7 @@ export function registerMediaRoutes(
       if (!upload || !Buffer.isBuffer(data)) throw new DomainError('INVALID_PAYLOAD');
       if (data.length > upload.permit.maxBytes) throw new DomainError('PAYLOAD_TOO_LARGE');
       // The declared type must match the real content of the file.
-      if (sniffAudio(data) !== upload.mime) throw new DomainError('UNSUPPORTED_MEDIA');
+      if (sniffMime(data) !== upload.mime) throw new DomainError('UNSUPPORTED_MEDIA');
       const { kind } = parseInput(kindParams, request.params);
       const stored = rooms.completeUpload(upload.session, kind, {
         data,
