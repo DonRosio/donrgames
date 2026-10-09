@@ -58,7 +58,7 @@ test('a full game of Qui est le + ? with three players: pictures, votes, reveals
     await expect(winners).toContainText('Bob');
     await expect(winners).toContainText('3 votes');
   }
-  await alice.page.getByRole('button', { name: 'Question suivante' }).click();
+  await alice.page.getByRole('button', { name: 'Suivant', exact: true }).click();
 
   // Question 2: Alice votes for herself, the others for Carol; Carol wins with two votes.
   await expect(alice.page.getByText('Question 2 / 2')).toBeVisible();

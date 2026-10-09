@@ -75,20 +75,20 @@
 }
 
 .brushed-text {
-  max-width: min(640px, 100%);
-  padding: 12px 44px 18px;
+  max-width: min(680px, 100%);
+  padding: 20px 56px 28px;
 }
 
 .brushed-button {
-  padding: 12px 54px 18px;
+  padding: 16px 58px 24px;
 }
 
 .brush {
   position: absolute;
-  top: -14%;
+  top: -16%;
   left: -6%;
   width: 112%;
-  height: 128%;
+  height: 132%;
   overflow: visible;
   pointer-events: none;
   /* Soft edges, like ink that bleeds a little. */
@@ -136,12 +136,31 @@
 }
 
 .brushed-button .brushedText {
-  color: var(--accent-strong);
   font-size: 1.9rem;
 }
 
-.digits {
-  font-family: var(--font-rounded);
+/* The bottom of the screen: near-opaque white, black text. */
+.brushedLight .brush polygon {
+  fill: #d8cdb6;
+}
+
+.brushedLight .brush .brushBand {
+  fill: #fffaf0;
+  fill-opacity: 0.96;
+}
+
+.brushedLight .brush .brushShine {
+  fill: #fff;
+  fill-opacity: 0.5;
+}
+
+.brushedLight .brushedText {
+  color: #17100f;
+  text-shadow: none;
+}
+
+.brushedLight :global(.error) {
+  color: #a3201a;
 }
 
 /* A button that is a text on a brush. */
@@ -160,7 +179,7 @@
 }
 
 .brushButton:hover:not(:disabled) .brushedText {
-  color: #fff3c8;
+  color: #000;
 }
 
 .brushButton:active:not(:disabled) .brush {
@@ -176,8 +195,7 @@
 }
 
 .brushButton:disabled .brushedText {
-  color: var(--text-muted);
-  opacity: 0.8;
+  color: #7a7064;
 }
 
 .brushButton:focus-visible {
@@ -348,7 +366,7 @@
 
 .label,
 .votes {
-  color: var(--frame-ring);
+  color: inherit;
   font-family: var(--font-rounded);
   font-size: 1.05rem;
   white-space: nowrap;
@@ -387,7 +405,8 @@
 /* The question on top, the most voted heads in the middle, the others scattered around. */
 .stage {
   position: relative;
-  height: 660px;
+  /* The button under the stage stays in sight on a screen of 860 px. */
+  height: clamp(540px, calc(100vh - 280px), 680px);
 }
 
 .stageTitle {
@@ -401,7 +420,7 @@
 
 .winners {
   position: absolute;
-  top: 52%;
+  top: 58%;
   left: 50%;
   display: flex;
   flex-wrap: wrap;

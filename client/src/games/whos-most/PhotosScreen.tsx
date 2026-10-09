@@ -84,19 +84,19 @@ export function PhotosScreen({
               Lancer les questions
             </BrushButton>
             {missing > 0 && (
-              <Brush size="text" seed={22}>
+              <Brush size="text" tone="light" seed={22}>
                 {missing > 1 ? 'Des joueurs n’ont' : 'Un joueur n’a'} pas encore envoyé de photo : «
                 Passer à la suite » lance quand même, sans photo
               </Brush>
             )}
           </>
         ) : (
-          <Brush size="text" seed={23}>
+          <Brush size="text" tone="light" seed={23}>
             L'hôte lance les questions quand tout le monde est prêt
           </Brush>
         )}
         {error && (
-          <Brush size="text" seed={24}>
+          <Brush size="text" tone="light" seed={24}>
             <span className="error" role="alert">
               {error}
             </span>

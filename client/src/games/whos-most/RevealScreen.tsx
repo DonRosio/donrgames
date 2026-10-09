@@ -124,15 +124,15 @@ export function RevealScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
       <div className={styles.bottom}>
         {isHost ? (
           <BrushButton seed={61} onClick={() => void next()}>
-            {view.last ? 'Retour au salon' : 'Question suivante'}
+            {view.last ? 'Retour au salon' : 'Suivant'}
           </BrushButton>
         ) : (
-          <Brush size="text" seed={62}>
+          <Brush size="text" tone="light" seed={62}>
             L'hôte lance la suite
           </Brush>
         )}
         {error && (
-          <Brush size="text" seed={63}>
+          <Brush size="text" tone="light" seed={63}>
             <span className="error" role="alert">
               {error}
             </span>

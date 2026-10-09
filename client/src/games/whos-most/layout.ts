@@ -10,18 +10,19 @@ export interface Spot {
 /**
  * Free places around the centre of the stage (the winners) and under the question (top): left
  * and right columns, then the bottom (kept inside the stage: the buttons come right after it).
- * Up to 9 heads besides the winners.
+ * Up to 10 heads besides the winners (9 at most are needed).
  */
 const SLOTS: readonly (readonly [number, number])[] = [
-  [13, 24],
-  [87, 24],
-  [8, 50],
-  [92, 50],
-  [15, 77],
-  [85, 77],
-  [32, 82],
-  [68, 82],
-  [50, 88],
+  [12, 22],
+  [88, 22],
+  [8, 56],
+  [92, 56],
+  [17, 84],
+  [83, 84],
+  [34, 84],
+  [66, 84],
+  [26, 44],
+  [74, 44],
 ];
 
 /**

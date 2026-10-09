@@ -64,7 +64,7 @@ export function VotingScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
 
       <div className={styles.bottom}>
         {locked ? (
-          <Brush size="button" seed={32}>
+          <Brush size="button" tone="light" seed={32}>
             Vote enregistré
           </Brush>
         ) : (
@@ -72,10 +72,10 @@ export function VotingScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
             {chosen ? `Voter pour ${name(chosen)}` : 'Choisis une tête'}
           </BrushButton>
         )}
-        <Brush size="text" seed={34}>
-          Tu peux voter pour toi, un vote est définitif ·{' '}
-          <span className={styles.digits}>{view.voted.length}</span> vote
-          {view.voted.length > 1 ? 's' : ''} reçu{view.voted.length > 1 ? 's' : ''}
+        <Brush tone="light" seed={34}>
+          <span className={styles.votes}>
+            {view.voted.length}/{Math.max(view.heads.length, view.voted.length)} votes
+          </span>
         </Brush>
         {isHost && (
           <BrushButton seed={35} disabled={!view.allVoted} onClick={() => void reveal()}>
@@ -83,7 +83,7 @@ export function VotingScreen({ view, room, isHost, act, fetchMedia }: ScreenProp
           </BrushButton>
         )}
         {error && (
-          <Brush size="text" seed={36}>
+          <Brush size="text" tone="light" seed={36}>
             <span className="error" role="alert">
               {error}
             </span>

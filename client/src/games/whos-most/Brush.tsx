@@ -32,10 +32,10 @@ function smearOf(seed: number): Smear {
   for (let index = 0; index < COLUMNS; index++) {
     const along = index / (COLUMNS - 1);
     const x = 12 + index * column;
-    const rise = (0.5 - along) * 8;
+    const rise = (0.5 - along) * 5;
     const taper = Math.abs(along * 2 - 1) ** 3 * 9;
-    const yTop = 6 + random() * 8 + rise + taper;
-    const yBottom = 46 + random() * 8 + rise - taper;
+    const yTop = 3 + random() * 6 + rise + taper;
+    const yBottom = 51 + random() * 6 + rise - taper;
     const lean = 2.5;
     // A little slanted step at the top, and another at the bottom.
     top.push([x + lean, yTop], [x + column + lean, yTop + (random() - 0.5) * 3]);
@@ -45,8 +45,8 @@ function smearOf(seed: number): Smear {
     const centre = 18 + random() * (WIDTH - 36);
     const middle = 1 - Math.abs((centre / WIDTH) * 2 - 1);
     const half = 5 + random() * 8;
-    const yTop = 8 + random() * 10;
-    const yBottom = 42 + random() * 10;
+    const yTop = 5 + random() * 8;
+    const yBottom = 46 + random() * 9;
     return {
       points: format([
         [centre - half + 3, yTop],
@@ -68,16 +68,21 @@ export function Brush({
   children,
   size = 'label',
   seed = 1,
+  tone = 'dark',
 }: {
   children: ReactNode;
   /** 'title': the question; 'label': a short text under a head; 'text': a sentence; 'button'. */
   size?: 'title' | 'label' | 'text' | 'button';
   /** Another number draws another smear. */
   seed?: number;
+  /** 'dark': translucent black, cream text (on the stage). 'light': near-opaque white, black text. */
+  tone?: 'dark' | 'light';
 }) {
   const smear = useMemo(() => smearOf(seed), [seed]);
   return (
-    <span className={`${styles.brushed} ${styles[`brushed-${size}`]}`}>
+    <span
+      className={`${styles.brushed} ${styles[`brushed-${size}`]} ${tone === 'light' ? styles.brushedLight : ''}`}
+    >
       <svg
         className={styles.brush}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -95,7 +100,7 @@ export function Brush({
   );
 }
 
-/** A button that is a text on a brush: the action of the host, or the vote. */
+/** A button that is a black text on a white brush: the action of the host, or the vote. */
 export function BrushButton({
   children,
   seed,
@@ -106,7 +111,7 @@ export function BrushButton({
 }) {
   return (
     <button type="button" className={styles.brushButton} {...props}>
-      <Brush size="button" {...(seed === undefined ? {} : { seed })}>
+      <Brush size="button" tone="light" {...(seed === undefined ? {} : { seed })}>
         {children}
       </Brush>
     </button>
