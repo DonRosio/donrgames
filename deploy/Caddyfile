@@ -1,11 +1,12 @@
 # HTTPS reverse proxy: see docs/deployment.md. Replace the domains with yours.
 # Caddy obtains and renews the Let's Encrypt certificates by itself (the domains must already
 # point to this server), and handles the switch to WebSocket for Socket.IO by itself.
-www.donrgames.fr {
+games.donr-corp.fr {
 	reverse_proxy 127.0.0.1:3000
 }
 
-# The name without "www" redirects to the site (PUBLIC_ORIGIN only accepts a single origin).
-donrgames.fr {
-	redir https://www.donrgames.fr{uri} permanent
+# The site's former names redirect to it (PUBLIC_ORIGIN only accepts a single origin, so the old
+# names cannot serve the application any more once it is switched).
+www.donrgames.fr, donrgames.fr {
+	redir https://games.donr-corp.fr{uri}
 }

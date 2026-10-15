@@ -1,7 +1,7 @@
 # DonrGames
 
 A website of **real-time multiplayer mini-games** among friends, each on their own PC. No account:
-you create a room, share its code, and play. The site is online at https://www.donrgames.fr.
+you create a room, share its code, and play. The site is online at https://games.donr-corp.fr.
 
 The games themselves are in French (their screens and messages); the code and this documentation
 are in English.
