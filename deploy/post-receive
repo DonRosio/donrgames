@@ -1,10 +1,11 @@
 #!/bin/sh
-# Hook git : à copier dans ~/mini-jeux/repo.git/hooks/post-receive sur le serveur (chmod +x).
-# Voir docs/deploiement.md. Rien ici ne touche content/ (hors dépôt) ni .env (hors dépôt).
+# Git hook: copy it to ~/mini-jeux/repo.git/hooks/post-receive on the server (chmod +x).
+# See docs/deployment.md. Nothing here touches content/ (outside the repository) or .env (outside
+# the repository).
 set -eu
 
-# `systemctl --user` a besoin de ceci quand le hook tourne hors session interactive (git push
-# par SSH). Nécessite `loginctl enable-linger mini-jeux` fait une fois par root (voir la doc).
+# `systemctl --user` needs this when the hook runs outside an interactive session (git push
+# over SSH). Requires `loginctl enable-linger mini-jeux`, done once by root (see the docs).
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 
 WORKTREE="$HOME/mini-jeux/current"
@@ -12,9 +13,15 @@ GIT_DIR="$HOME/mini-jeux/repo.git"
 
 git --work-tree="$WORKTREE" --git-dir="$GIT_DIR" checkout -f main
 cd "$WORKTREE"
+# The fonts are not in the repository (their licences do not allow redistributing them): put
+# them once in ~/mini-jeux/fonts; they are copied to client/public/fonts before each build.
+if [ -d "$HOME/mini-jeux/fonts" ]; then
+  mkdir -p client/public/fonts
+  cp -f "$HOME/mini-jeux/fonts/"*.woff2 client/public/fonts/
+fi
 cp "$WORKTREE/deploy/mini-jeux.service" "$HOME/.config/systemd/user/mini-jeux.service"
 systemctl --user daemon-reload
 npm ci
 npm run build
 systemctl --user restart mini-jeux
-echo "Déployé : $(git --git-dir="$GIT_DIR" rev-parse --short main)"
+echo "Deployed: $(git --git-dir="$GIT_DIR" rev-parse --short main)"

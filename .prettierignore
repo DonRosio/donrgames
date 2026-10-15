@@ -4,4 +4,4 @@ coverage
 content
 .certs
 package-lock.json
-docs/cahier-des-charges.md
+docs/requirements.md

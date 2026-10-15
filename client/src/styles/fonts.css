@@ -1,29 +1,31 @@
-/* Self-hosted fonts only (CSP `font-src 'self'`). Files live in src/assets/fonts. */
+/* Self-hosted fonts only (CSP `font-src 'self'`). The font files are not in the repository (see the
+   README, "Fonts"): put them in client/public/fonts. Without them, the fallback fonts of
+   tokens.css apply. */
 
 /* Titles: the site title and the names of the games. Everything else uses the system font. */
 @font-face {
   font-family: 'Shizuoka Cyberpunk';
-  src: url('../assets/fonts/shizuoka-cyberpunk.woff2') format('woff2');
+  src: url('/fonts/shizuoka-cyberpunk.woff2') format('woff2');
   font-display: swap;
 }
 
 /* Only for the presenter's line of the round transition ("Manche suivante !"). */
 @font-face {
   font-family: 'Heyam';
-  src: url('../assets/fonts/heyam.woff2') format('woff2');
+  src: url('/fonts/heyam.woff2') format('woff2');
   font-display: swap;
 }
 
 /* Qui est le + ?: the "Qui est le +" of the question (script). */
 @font-face {
   font-family: 'Candice';
-  src: url('../assets/fonts/candice.woff2') format('woff2');
+  src: url('/fonts/candice.woff2') format('woff2');
   font-display: swap;
 }
 
 /* Qui est le + ?: the adjective of the question and the number of votes (rounded). */
 @font-face {
   font-family: 'Sniglet';
-  src: url('../assets/fonts/sniglet.woff2') format('woff2');
+  src: url('/fonts/sniglet.woff2') format('woff2');
   font-display: swap;
 }

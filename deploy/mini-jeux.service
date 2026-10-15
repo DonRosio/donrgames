@@ -1,5 +1,5 @@
-# Unité systemd --user (pas de root) : voir docs/deploiement.md.
-# Ajuste ExecStart si `which node` diffère (installation Node par la méthode choisie).
+# systemd --user unit (no root): see docs/deployment.md.
+# Adjust ExecStart if `which node` differs (Node installed by the chosen method).
 [Unit]
 Description=mini-jeux
 After=network-online.target
@@ -13,12 +13,12 @@ Environment=NODE_ENV=production
 ExecStart=/usr/bin/node server/src/index.ts
 Restart=on-failure
 RestartSec=5
-# Un plantage laisse tout en RAM : rien à nettoyer avant de redémarrer.
+# A crash leaves everything in RAM: nothing to clean up before restarting.
 
-# Durcissement minimal : le service tourne déjà sous un utilisateur sans privilège, et tout
-# l'état est en RAM. Les protections qui isolent le système de fichiers ou abaissent les
-# « capabilities » (ProtectSystem, PrivateTmp, ProtectKernel*…) échouent en unité --user sur
-# Ubuntu 24.04 (status=218/CAPABILITIES) : elles ne sont pas utilisées.
+# Minimal hardening: the service already runs as an unprivileged user, and all the state is in
+# RAM. The protections that isolate the file system or lower the "capabilities" (ProtectSystem,
+# PrivateTmp, ProtectKernel*…) fail in a --user unit on Ubuntu 24.04
+# (status=218/CAPABILITIES): they are not used.
 NoNewPrivileges=true
 RestrictSUIDSGID=true
 LockPersonality=true

@@ -1,8 +1,12 @@
-Heyam -> Utilise cette police pour la phrase "Manche suivante !" prononcée par le présentateur lors de la transition avec les nuages. Il faut qu'elle soit affichée en vraiment gros.
-Shizuoka Cyberpunk -> Titre "Mini-jeux entre amis" et titre des jeux
-Utilise la police par défaut pour le reste.
-Qui est le + ? (whos-most) :
-  Candice Personal Use -> "Qui est le +" de la question et les textes posés sur les gribouillages (boutons de l'hôte, vote, indications). Licence « Personal Use » : à vérifier pour un site web.
-  Sniglet -> l'adjectif de la question, le nombre de votes et les petites étiquettes sous les têtes.
-  Shizuoka Cyberpunk -> le pseudo, sur le bord haut de chaque cadre.
-Shizuoka Cyberpunk -> aussi pour les titres d'écran des jeux (rôle d'Among Legends, « Tu es le démineur », « BOUM » du Désamorçage).
+Fonts used by the site. The .woff2 files are NOT in the repository (their licences do not allow
+redistributing them); put them in client/public/fonts (see the README, "Fonts"). Names to use:
+shizuoka-cyberpunk.woff2, heyam.woff2, candice.woff2, sniglet.woff2.
+
+Heyam -> use this font for the phrase "Manche suivante !" spoken by the presenter during the transition with the clouds. It must be displayed really big.
+Shizuoka Cyberpunk -> title "Mini-jeux entre amis" and titles of the games
+Use the default font for the rest.
+Qui est le + ? (whos-most):
+  Candice (Personal Use) -> the "Qui est le +" of the question and the texts placed on the scribbles (host's buttons, vote, hints). "Personal Use" licence: not redistributable, to check for a website.
+  Sniglet -> the adjective of the question, the vote count and the small labels under the heads.
+  Shizuoka Cyberpunk -> the nickname, on the top edge of each frame.
+Shizuoka Cyberpunk -> also for the screen titles of the games (role of Among Legends, "Tu es le démineur", "BOUM" of Defusal).

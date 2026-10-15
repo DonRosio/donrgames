@@ -19,5 +19,10 @@ playwright-report/
 !/content/**/
 !/content/**/*.example.txt
 
-# Local Claude Code settings
+# Fonts: their licences do not allow redistributing them (see the README, "Fonts")
+client/public/fonts/
+design/font/*.woff2
+client/src/assets/fonts/
+
+# Local assistant settings
 .claude/
