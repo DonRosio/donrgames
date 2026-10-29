@@ -74,7 +74,9 @@ export function GamePanel({ room, catalog, session }: GamePanelProps) {
             <div>
               <h3 className={styles.name}>
                 {info.meta.name}
-                {!info.meta.replayable && <span className={styles.badge}>à usage unique</span>}
+                {!info.meta.replayable && (
+                  <span className={styles.badge}>{info.meta.usageLabel ?? 'à usage unique'}</span>
+                )}
               </h3>
               <p className="muted">{info.meta.description}</p>
               <p className={styles.content}>{playerCountLabel(info.meta)}</p>

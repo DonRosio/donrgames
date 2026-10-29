@@ -33,6 +33,7 @@ describe('HTTP API', () => {
       'among-legends',
       'defusal',
       'whos-most',
+      'incognito',
     ]);
   });
 

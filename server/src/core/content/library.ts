@@ -39,7 +39,7 @@ export function contentIdOf(fileName: string): string {
 
 export type ContentKind = 'video' | 'text';
 
-export const MAX_TEXT_LENGTH = 80;
+export const MAX_TEXT_LENGTH = 160;
 
 /**
  * Reads `<contentDir>/<gameId>/selection.txt`: one "file | title" line per video, or, for a

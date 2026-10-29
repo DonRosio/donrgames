@@ -126,7 +126,7 @@ ssh mini-jeux@server systemctl --user status mini-jeux
 ssh mini-jeux@server journalctl --user -u mini-jeux -f   # logs (no IP/nickname/code, see security-review.md)
 ```
 
-## 5. Content and fonts (dubbing videos, who's-most questions)
+## 5. Content and fonts (dubbing videos, who's-most and Incognito questions)
 
 `content/` is not versioned (see `.gitignore`): it is copied separately, with `rsync`, as planned
 in `architecture.md` §7.5.
@@ -146,7 +146,16 @@ rsync -avz --delete content/whos-most/ mini-jeux@server:mini-jeux/current/conten
 ssh mini-jeux@server systemctl --user restart mini-jeux   # re-reads selection.txt at start-up
 ```
 
-Without this folder, the game is displayed but cannot be started ("no question left"). Do this
+The questions of Incognito work the same way (one line per question, 160 characters max; 90 lines
+make three games per room, see `architecture.md` §7 quinquies):
+
+```bash
+ssh mini-jeux@server mkdir -p mini-jeux/current/content/incognito
+rsync -avz --delete content/incognito/selection.txt mini-jeux@server:mini-jeux/current/content/incognito/
+ssh mini-jeux@server systemctl --user restart mini-jeux   # re-reads selection.txt at start-up
+```
+
+Without these folders, the games are displayed but cannot be started ("no question left"). Do this
 copy **before** `git push prod main`: the push already restarts the server, a single time.
 
 The **fonts** are not in the repository either (their licences do not allow redistributing them,

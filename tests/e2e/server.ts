@@ -27,6 +27,21 @@ const { app } = await buildApp({
   config,
   content: new Map([
     ['dubbing', { gameId: 'dubbing', items: [clip], problems: [] }],
+    // Questions of Incognito: fixed here too.
+    [
+      'incognito',
+      {
+        gameId: 'incognito',
+        items: ['Quel âge avez-vous ?', 'Votre plat préféré ?', 'Un défaut ?'].map((title) => ({
+          id: title,
+          title,
+          durationMs: 0,
+          file: '',
+          size: 0,
+        })),
+        problems: [],
+      },
+    ],
     // Questions of "Qui est le + ?": fixed here, whatever content/whos-most holds.
     [
       'whos-most',

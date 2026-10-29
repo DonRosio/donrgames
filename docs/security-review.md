@@ -61,13 +61,24 @@ Verified: photos served only by the authenticated route (`no-store`, `image/png`
 | `'wasm-unsafe-eval'` allows the compilation of WebAssembly by the site's scripts.                                                            | Very low | No JavaScript `eval`; only the site's scripts (`'self'`) run, an injected script could already do everything in JS. |
 | A game longer than 2 h would lose its photos (maximum lifetime of the media): heads replaced by initials. Not a flaw, a limit to know about. | —        | Keep games short, or lengthen `ttlMs` if the case arises.                                                           |
 
-## 6. Repository security
+## 6. Review of "Incognito" (incognito, October 2026)
+
+New surface: text answers and notes typed by the players, a secret (who is behind which first name) kept by the server, questions read from `content/incognito/selection.txt`.
+
+Verified: the first-name ↔ player mapping is never in a view before the unmasking (a test compares the exact keys of the matching view, and the players' order is drawn independently of the first names); a player cannot answer twice, answer an old question, link his own first name or someone unknown (`ALREADY_ANSWERED`, `STALE_QUESTION`, `OWN_ALIAS`, `UNKNOWN_PLAYER`); payloads are strict zod schemas with length limits (answer 120, note 30, at most 10 links); notes are private to their author; everything is displayed as text (React escapes it). The only limit raised in the foundation is the length of a text line (80 → 160 characters), checked by the content loader.
+
+| Remaining risk                                                                      | Severity | Current or possible countermeasure                          |
+| ----------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------- |
+| A player can reveal his first name in his answers (a rule of the game, not a flaw). | —        | Part of the game: the others try to guess from the writing. |
+| An offensive answer is shown to everybody.                                          | Low      | Kick by the host; game among friends.                       |
+
+## 7. Repository security
 
 - **Before each commit** (`.githooks/pre-commit`, enabled by `npm install`): gitleaks looks for a secret in the staged changes, Prettier checks the format of the staged files. A commit that fails is refused.
 - **GitHub Actions** (`.github/workflows/ci.yml`), at each push to `main` and **every Monday**: `npm run check`, build, `npm audit`, gitleaks over the whole history. A failure sends an e-mail to the repository's author: that is how a vulnerability discovered in an existing dependency is reported without anybody pushing. Actions pinned by SHA fingerprint, read-only token.
 - **Dependabot** (`.github/dependabot.yml`) keeps the fingerprints of the actions up to date. The npm dependencies are not updated through pull requests (the project commits to `main`): the weekly audit and Dependabot's alerts (repository setting) give warning.
 
-## 7. Limits of the tests
+## 8. Limits of the tests
 
 - The microphone is simulated (Chrome's beep): the tests prove the complete chain (recording, upload, decoding and playback of the takes at each player, votes, ranking), not the quality of the audio/video sync, which remains to be judged by ear.
 - The tests use the shortest valid video of `content/dubbing`: without a video, they do not start.

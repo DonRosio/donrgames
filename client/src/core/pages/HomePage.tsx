@@ -135,7 +135,9 @@ export function HomePage({ joinCode }: { joinCode: string | null }) {
               >
                 <span className={styles.gameName}>
                   {game.name}
-                  {!game.replayable && <span className={styles.badge}>à usage unique</span>}
+                  {!game.replayable && (
+                    <span className={styles.badge}>{game.usageLabel ?? 'à usage unique'}</span>
+                  )}
                 </span>
                 <span className="muted">{game.description}</span>
                 <span className={styles.players}>{playerCountLabel(game)}</span>

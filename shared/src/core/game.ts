@@ -15,6 +15,8 @@ export interface GameMeta {
   contentUnit?: string;
   /** false: the game consumes its content ("à usage unique" badge, played content tracking). */
   replayable: boolean;
+  /** Badge of a non-replayable game, instead of "à usage unique" (e.g. '3 parties par salon'). */
+  usageLabel?: string;
   /**
    * false: a game played for fun, with no final ranking. When it ends (`ctx.end([])`), everyone
    * goes straight back to the lobby.

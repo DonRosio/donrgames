@@ -84,7 +84,7 @@ describe('text content library', () => {
     mkdirSync(folder);
     writeFileSync(
       path.join(folder, 'selection.txt'),
-      ['# comment', 'sale', '', 'Fort aux jeux vidéo', 'SALE', 'x'.repeat(81)].join('\n'),
+      ['# comment', 'sale', '', 'Fort aux jeux vidéo', 'SALE', 'x'.repeat(161)].join('\n'),
     );
     const library = loadContentLibrary(root, 'questions', 'text');
     expect(library.items.map((item) => item.title)).toEqual(['sale', 'Fort aux jeux vidéo']);
